@@ -1,0 +1,19 @@
+# Compilation outputs
+.pio/
+.vscode/
+build/
+*.bin
+*.elf
+*.hex
+
+# Libraries
+lib/
+.pioenvs/
+.piolibdeps/
+
+# System Files
+.DS_Store
+Thumbs.db
+
+# Secrets
+firmware/include/secrets.h
