@@ -42,6 +42,19 @@ An advanced, open-source automated fermentation system optimized for probiotic c
    - Upload to ESP32-S3.
 3. **Web Interface**: Once connected to WiFi, navigate to the ESP32's IP address in your browser.
 
+## Optimizations and Future Work
+
+### Implemented Optimizations
+- **Time-Proportional Titration**: Uses a 10-second duty cycle for pumps where the 'ON' time is proportional to the deviation from the pH target. This drastically reduces overshooting compared to simple bang-bang control.
+- **Async Processing**: All networking and control logic is non-blocking, ensuring that the bioreactor remains responsive even during heavy web traffic.
+- **Persistent Telemetry**: Data is logged every minute to internal SPIFFS, allowing for long-term growth curve analysis without an external SD card.
+
+### Suggested Future Improvements
+- **MQTT Integration**: For cloud-based data logging and multi-bioreactor management.
+- **OTA Updates**: Over-the-air firmware updates for easier maintenance in sealed enclosures.
+- **Advanced PID**: Fine-tuning of Ki and Kd parameters for even tighter pH control.
+- **Oxygen Control**: Integration of a DO (Dissolved Oxygen) sensor and air pump control.
+
 ## License
 
 This project is licensed under the MIT License.
