@@ -21,6 +21,10 @@ DallasTemperature sensors(&oneWire);
 AsyncWebServer server(80);
 
 // Global state
+float phTarget = PH_TARGET;
+float phHysteresis = PH_HYSTERESIS;
+long feedingInterval = FEEDING_INTERVAL_MS;
+
 float currentPH = 0.0;
 float currentOD = 0.0;
 float currentTemp = 0.0;
@@ -45,6 +49,8 @@ void logData();
 String getTelemetryJSON();
 void emergencyStop();
 void setupOTA();
+void loadSettings();
+void saveSettings();
 
 void setup() {
   Serial.begin(115200);
@@ -53,6 +59,7 @@ void setup() {
   if(!SPIFFS.begin(true)){
     Serial.println("An Error has occurred while mounting SPIFFS");
   }
+  loadSettings();
 
   // Initialize I2C
   Wire.begin(I2C_SDA, I2C_SCL);
@@ -107,6 +114,26 @@ void setup() {
         digitalWrite(PUMP_NUTRIENT_PIN, HIGH);
       }
     }
+    request->send(200, "text/plain", "OK");
+  });
+
+  server.on("/settings", HTTP_GET, [](AsyncWebServerRequest *request){
+    StaticJsonDocument<200> doc;
+    doc["phTarget"] = phTarget;
+    doc["phHysteresis"] = phHysteresis;
+    doc["feedingInterval"] = feedingInterval;
+    String output;
+    serializeJson(doc, output);
+    request->send(200, "application/json", output);
+  });
+
+  server.on("/set", HTTP_POST, [](AsyncWebServerRequest *request){}, NULL, [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total){
+    StaticJsonDocument<200> doc;
+    deserializeJson(doc, (const char*)data);
+    if(doc.containsKey("phTarget")) phTarget = doc["phTarget"];
+    if(doc.containsKey("phHysteresis")) phHysteresis = doc["phHysteresis"];
+    if(doc.containsKey("feedingInterval")) feedingInterval = doc["feedingInterval"];
+    saveSettings();
     request->send(200, "text/plain", "OK");
   });
 
@@ -186,10 +213,10 @@ void updateSensors() {
 }
 
 void controlPH() {
-  float error = currentPH - PH_TARGET;
+  float error = currentPH - phTarget;
 
   // Proportional control with hysteresis
-  if (abs(error) < PH_HYSTERESIS) {
+  if (abs(error) < phHysteresis) {
     digitalWrite(PUMP_ACID_PIN, LOW);
     digitalWrite(PUMP_BASE_PIN, LOW);
     phIntegral = 0; // Reset integral when in target
@@ -223,7 +250,7 @@ void controlFeeding() {
   unsigned long currentMillis = millis();
 
   // Trigger scheduled feeding
-  if (currentMillis - lastFeedingTime > FEEDING_INTERVAL_MS) {
+  if (currentMillis - lastFeedingTime > (unsigned long)feedingInterval) {
     nutrientPumpActive = true;
     nutrientPumpStartTime = currentMillis;
     digitalWrite(PUMP_NUTRIENT_PIN, HIGH);
@@ -261,6 +288,28 @@ void emergencyStop() {
   digitalWrite(PUMP_ACID_PIN, LOW);
   digitalWrite(PUMP_BASE_PIN, LOW);
   digitalWrite(PUMP_NUTRIENT_PIN, LOW);
+}
+
+void loadSettings() {
+  File file = SPIFFS.open("/settings.json", FILE_READ);
+  if(!file) return;
+  StaticJsonDocument<200> doc;
+  deserializeJson(doc, file);
+  phTarget = doc["phTarget"] | PH_TARGET;
+  phHysteresis = doc["phHysteresis"] | PH_HYSTERESIS;
+  feedingInterval = doc["feedingInterval"] | FEEDING_INTERVAL_MS;
+  file.close();
+}
+
+void saveSettings() {
+  File file = SPIFFS.open("/settings.json", FILE_WRITE);
+  if(!file) return;
+  StaticJsonDocument<200> doc;
+  doc["phTarget"] = phTarget;
+  doc["phHysteresis"] = phHysteresis;
+  doc["feedingInterval"] = feedingInterval;
+  serializeJson(doc, file);
+  file.close();
 }
 
 void setupOTA() {
