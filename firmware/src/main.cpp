@@ -28,6 +28,11 @@ long feedingInterval = FEEDING_INTERVAL_MS;
 float currentPH = 0.0;
 float currentOD = 0.0;
 float currentTemp = 0.0;
+float growthRate = 0.0; // Specific growth rate (mu)
+
+float lastOD = 0.0;
+unsigned long lastODTime = 0;
+
 bool sensorError = false;
 unsigned long lastSensorRead = 0;
 unsigned long lastFeedingTime = 0;
@@ -176,6 +181,8 @@ void loop() {
 }
 
 void updateSensors() {
+  unsigned long currentMillis = millis();
+
   // Read Temperature
   sensors.requestTemperatures();
   float temp = sensors.getTempCByIndex(0);
@@ -207,6 +214,21 @@ void updateSensors() {
     currentOD = log10(32768.0 / (float)odRaw) * OD_CALIBRATION_FACTOR;
   } else {
     currentOD = 4.0; // Max out at high density
+  }
+
+  // Growth Rate Estimation (Specific Growth Rate mu)
+  // mu = (ln(OD2) - ln(OD1)) / (t2 - t1)
+  if (lastODTime > 0 && currentOD > 0.05 && lastOD > 0.05) {
+     float dt = (currentMillis - lastODTime) / 3600000.0; // dt in hours
+     if (dt > 0.1) { // Every 6 minutes
+        float mu = (log(currentOD) - log(lastOD)) / dt;
+        growthRate = (growthRate * 0.8) + (mu * 0.2); // Low-pass filter
+        lastOD = currentOD;
+        lastODTime = currentMillis;
+     }
+  } else if (currentOD > 0.05 && lastODTime == 0) {
+     lastOD = currentOD;
+     lastODTime = currentMillis;
   }
 
   sensorError = false; // Reset if readings successful
@@ -280,7 +302,9 @@ void logData() {
   file.print(",");
   file.print(currentOD);
   file.print(",");
-  file.println(currentTemp);
+  file.print(currentTemp);
+  file.print(",");
+  file.println(growthRate);
   file.close();
 }
 
@@ -347,6 +371,7 @@ String getTelemetryJSON() {
   doc["ph"] = currentPH;
   doc["od"] = currentOD;
   doc["temp"] = currentTemp;
+  doc["mu"] = growthRate;
   doc["timestamp"] = now.timestamp();
   doc["error"] = sensorError;
 

@@ -36,6 +36,7 @@ An advanced, open-source automated fermentation system optimized for probiotic c
 ## Setup and Installation
 
 1. **Hardware Assembly**: Refer to [hardware.md](hardware.md) for wiring diagrams and BOM.
+2. **Growth Modeling**: See [research.md](research.md) for details on kinetic parameters.
 2. **Firmware Upload**:
    - Install the ESP32 board support in Arduino IDE.
    - Install required libraries via Library Manager.

@@ -41,6 +41,11 @@ const char index_html[] PROGMEM = R"rawliteral(
   </div>
 
   <div class="card">
+    <h2>Growth Rate (µ)</h2>
+    <p><span class="value" id="mu">--</span> <span class="unit">h⁻¹</span></p>
+  </div>
+
+  <div class="card">
     <h2>Configuration</h2>
     <label>pH Target:</label> <input type="number" id="target-ph" step="0.1"><br>
     <button onclick="updateSettings()">Save Settings</button>
@@ -100,6 +105,7 @@ const char index_html[] PROGMEM = R"rawliteral(
         document.getElementById("ph").innerHTML = data.ph.toFixed(2);
         document.getElementById("od").innerHTML = data.od.toFixed(3);
         document.getElementById("temp").innerHTML = data.temp.toFixed(1);
+        document.getElementById("mu").innerHTML = data.mu.toFixed(2);
 
         // Update Chart
         var now = new Date().toLocaleTimeString();
