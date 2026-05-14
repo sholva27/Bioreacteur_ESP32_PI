@@ -27,6 +27,10 @@ unsigned long lastLogTime = 0;
 bool nutrientPumpActive = false;
 unsigned long nutrientPumpStartTime = 0;
 
+// PID constants for pH control
+float Kp = 100.0, Ki = 0.0, Kd = 0.0;
+float phIntegral = 0.0, lastPhError = 0.0;
+
 // Function prototypes
 void updateSensors();
 void controlPH();
@@ -80,6 +84,10 @@ void setup() {
 
   server.on("/data", HTTP_GET, [](AsyncWebServerRequest *request){
     request->send(200, "application/json", getTelemetryJSON());
+  });
+
+  server.on("/download_log", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(SPIFFS, "/log.csv", "text/csv", true);
   });
 
   server.on("/pump", HTTP_GET, [](AsyncWebServerRequest *request){
@@ -159,15 +167,36 @@ void updateSensors() {
 }
 
 void controlPH() {
-  if (currentPH > (PH_TARGET + PH_HYSTERESIS)) {
-    digitalWrite(PUMP_ACID_PIN, HIGH);
-    digitalWrite(PUMP_BASE_PIN, LOW);
-  } else if (currentPH < (PH_TARGET - PH_HYSTERESIS)) {
-    digitalWrite(PUMP_ACID_PIN, LOW);
-    digitalWrite(PUMP_BASE_PIN, HIGH);
-  } else {
+  float error = currentPH - PH_TARGET;
+
+  // Proportional control with hysteresis
+  if (abs(error) < PH_HYSTERESIS) {
     digitalWrite(PUMP_ACID_PIN, LOW);
     digitalWrite(PUMP_BASE_PIN, LOW);
+    phIntegral = 0; // Reset integral when in target
+    return;
+  }
+
+  // Simple PWM-like control for pumps to prevent overshooting
+  // We'll use a fixed cycle of 10 seconds for pump titration
+  static unsigned long lastCycleStart = 0;
+  unsigned long cycleTime = millis() - lastCycleStart;
+  if (cycleTime >= 10000) {
+    lastCycleStart = millis();
+    cycleTime = 0;
+  }
+
+  // Duration proportional to error (max 5s per 10s cycle)
+  unsigned long pumpDuration = min((unsigned long)(abs(error) * Kp), 5000UL);
+
+  if (error > 0) { // Too basic, need acid
+    if (cycleTime < pumpDuration) digitalWrite(PUMP_ACID_PIN, HIGH);
+    else digitalWrite(PUMP_ACID_PIN, LOW);
+    digitalWrite(PUMP_BASE_PIN, LOW);
+  } else { // Too acidic, need base
+    if (cycleTime < pumpDuration) digitalWrite(PUMP_BASE_PIN, HIGH);
+    else digitalWrite(PUMP_BASE_PIN, LOW);
+    digitalWrite(PUMP_ACID_PIN, LOW);
   }
 }
 
