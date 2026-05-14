@@ -8,6 +8,8 @@
 | ADS1115 | 16-bit 4-Channel I2C ADC | 1 |
 | DS3231 | High Precision I2C RTC | 1 |
 | TTP223B | Capacitive Touch Button Module | 1 |
+| AS7262 | 6-Channel Visible Spectral Sensor | 1 |
+| TCS34725 | RGB Color Sensor with IR Filter | 1 |
 | pH Probe + Module | Industrial Grade BNC Probe | 1 |
 | Photodiode | Silicon Photodiode for OD | 1 |
 | 650nm Laser / 600nm LED | Light Source for OD | 1 |
@@ -78,6 +80,19 @@ Maintaining a stable temperature is critical for probiotic growth. While the **D
 - **For Bioreactors**: The **Waterproof DS18B20** remains the best balance of cost and performance. It is easy to sanitize and simple to wire.
 - **For High Precision Research**: A **PT100** with a MAX31865 breakout is recommended if you need 0.1°C accuracy and high stability.
 - **For Fast Response**: Use a small **10k NTC Thermistor** if you need to detect rapid temperature changes, though it requires more complex calibration.
+
+## Optical Metabolic Sensing Options
+
+To detect metabolic activity beyond biomass (OD), specialized light sensors can monitor changes in chemical indicators or metabolic byproducts:
+
+| Sensor | Purpose | Pros | Cons |
+|--------|---------|------|------|
+| **AS7262** | Spectral Fingerprinting | Monitors 6 wavelengths simultaneously | Higher I2C overhead |
+| **TCS34725** | Colorimetric Assays | Detects color changes in redox dyes | Sensitive to ambient light interference |
+
+### Practical Applications
+- **Redox Dyes**: Using a **TCS34725** to monitor the transition of **Resazurin** (blue/non-fluorescent) to **Resorufin** (pink/highly fluorescent) as a direct proxy for microbial respiration.
+- **Spectral Shift**: Using an **AS7262** to detect shifts in the absorption spectrum of the growth media caused by the secretion of specific metabolites or bacteriocins.
 
 ## Sensor Options for OD600
 

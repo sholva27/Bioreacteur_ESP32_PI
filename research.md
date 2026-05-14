@@ -26,7 +26,12 @@ This value represents the instantaneous rate of biomass increase. During the **e
 
 ## Research Applications
 
-### 1. Fed-batch and Chemostat Strategies
+### 1. Optical Redox Monitoring
+By adding redox-active dyes like **Resazurin** or **Methylene Blue** to the media, the metabolic activity (respiration) of the culture can be tracked optically.
+- **Resazurin Assay**: Using an RGB sensor (like TCS34725) to monitor the color change from blue (inactive) to pink (metabolically active). This provides a more sensitive measurement of health than OD alone.
+- **Spectral Fingerprinting**: Using a multi-channel spectral sensor (AS7262) to monitor subtle changes in the light absorption at different wavelengths (450nm - 650nm), which can be correlated with nutrient depletion or metabolic byproduct accumulation.
+
+### 2. Fed-batch and Chemostat Strategies
 The automated nutrient pump can be programmed for specific feeding profiles:
 - **Constant Feed**: Maintains a steady supply of substrate.
 - **Exponential Feed**: Matches the growth rate (µ) to maintain a constant substrate concentration.
