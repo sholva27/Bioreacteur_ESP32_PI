@@ -34,6 +34,11 @@ const char index_html[] PROGMEM = R"rawliteral(
   </div>
 
   <div class="card">
+    <h2>Temperature</h2>
+    <p><span class="value" id="temp">--</span> <span class="unit">°C</span></p>
+  </div>
+
+  <div class="card">
     <h2>Actions</h2>
     <button onclick="togglePump('nutrient')">Manual Feed</button>
     <button class="btn-download" onclick="window.location.href='/download_log'">Download CSV Log</button>
@@ -47,6 +52,7 @@ const char index_html[] PROGMEM = R"rawliteral(
           var data = JSON.parse(this.responseText);
           document.getElementById("ph").innerHTML = data.ph.toFixed(2);
           document.getElementById("od").innerHTML = data.od.toFixed(3);
+          document.getElementById("temp").innerHTML = data.temp.toFixed(1);
           if (data.error) {
             document.getElementById("error-msg").style.display = "block";
           } else {

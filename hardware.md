@@ -25,6 +25,7 @@
 | Pump Base (PWM) | GPIO 11 | - |
 | Pump Nutrients (PWM) | GPIO 12 | - |
 | Laser/LED Control | GPIO 13 | - |
+| OneWire (Temp) | GPIO 14 | - |
 | Status LED | GPIO 21 | - |
 
 ## Light Source Options for OD600
@@ -42,6 +43,22 @@ While "OD600" strictly refers to 600nm (Amber/Orange light), different sources c
 - **For Standard Use (OD600 Proxy)**: The **650nm Laser Module** you mentioned is perfectly acceptable for tracking growth curves, as long as the same source is used for the entire experiment.
 - **For Scientific Accuracy**: A **600nm Amber LED** (e.g., Kingbright or Osram) is preferred. To use it effectively, mount it inside a black 3D-printed tube with a small aperture (1-2mm) to mimic a beam.
 - **For Research**: If comparing results with published literature, using a source closer to 600nm (like a 600nm LED) ensures that the extinction coefficients match standard values.
+
+## Temperature Sensor Options
+
+Maintaining a stable temperature is critical for probiotic growth. While the **DS18B20** is the standard digital choice, here are other alternatives:
+
+| Sensor | Type | Pros | Cons |
+|--------|------|------|------|
+| **DS18B20** | Digital (OneWire) | Waterproof versions common, No ADC needed, Multi-drop | Slower response time (~750ms for 12-bit) |
+| **PT100/PT1000** | RTD (Analog) | Extremely precise, industry standard | Requires a specialized amplifier (e.g., MAX31865) |
+| **NTC Thermistor** | Analog (Resistor) | Fast response, extremely cheap | Non-linear, requires calibration and voltage divider |
+| **BME280 / SHT3x** | Digital (I2C) | Very high accuracy for air temp/humidity | Not naturally waterproof; hard to use in liquids |
+
+### Recommendations
+- **For Bioreactors**: The **Waterproof DS18B20** remains the best balance of cost and performance. It is easy to sanitize and simple to wire.
+- **For High Precision Research**: A **PT100** with a MAX31865 breakout is recommended if you need 0.1°C accuracy and high stability.
+- **For Fast Response**: Use a small **10k NTC Thermistor** if you need to detect rapid temperature changes, though it requires more complex calibration.
 
 ## Sensor Options for OD600
 

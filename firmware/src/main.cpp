@@ -7,6 +7,8 @@
 #include <Wire.h>
 #include <SPIFFS.h>
 #include <ArduinoOTA.h>
+#include <OneWire.h>
+#include <DallasTemperature.h>
 
 #include "config.h"
 #include "dashboard.html.h"
@@ -14,11 +16,14 @@
 // Hardware interfaces
 Adafruit_ADS1115 ads;
 RTC_DS3231 rtc;
+OneWire oneWire(TEMP_SENSOR_PIN);
+DallasTemperature sensors(&oneWire);
 AsyncWebServer server(80);
 
 // Global state
 float currentPH = 0.0;
 float currentOD = 0.0;
+float currentTemp = 0.0;
 bool sensorError = false;
 unsigned long lastSensorRead = 0;
 unsigned long lastFeedingTime = 0;
@@ -61,6 +66,7 @@ void setup() {
     Serial.println("Couldn't find RTC");
     sensorError = true;
   }
+  sensors.begin();
 
   // Initialize Pins
   pinMode(PUMP_ACID_PIN, OUTPUT);
@@ -143,6 +149,15 @@ void loop() {
 }
 
 void updateSensors() {
+  // Read Temperature
+  sensors.requestTemperatures();
+  float temp = sensors.getTempCByIndex(0);
+  if (temp != DEVICE_DISCONNECTED_C) {
+    currentTemp = temp;
+  } else {
+    sensorError = true;
+  }
+
   // Read pH
   int16_t phRaw = ads.readADC_SingleEnded(ADS_PH_CH);
   if (phRaw == -1) { // Basic check for ADS failure
@@ -236,7 +251,9 @@ void logData() {
   file.print(",");
   file.print(currentPH);
   file.print(",");
-  file.println(currentOD);
+  file.print(currentOD);
+  file.print(",");
+  file.println(currentTemp);
   file.close();
 }
 
@@ -280,6 +297,7 @@ String getTelemetryJSON() {
 
   doc["ph"] = currentPH;
   doc["od"] = currentOD;
+  doc["temp"] = currentTemp;
   doc["timestamp"] = now.timestamp();
   doc["error"] = sensorError;
 

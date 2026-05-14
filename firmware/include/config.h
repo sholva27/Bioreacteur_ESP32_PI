@@ -11,6 +11,7 @@
 #define PUMP_BASE_PIN 11
 #define PUMP_NUTRIENT_PIN 12
 #define OD_LIGHT_PIN 13
+#define TEMP_SENSOR_PIN 14
 
 #define STATUS_LED 21
 
