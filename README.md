@@ -1,6 +1,6 @@
 # ESP32-S3 Probiotic Biofermenter
 
-An advanced, open-source automated fermentation system optimized for probiotic culture growth. This project leverages the ESP32-S3 to provide high-precision monitoring and control of pH, Optical Density (OD), and feeding cycles.
+An advanced, open-source automated fermentation system optimized for probiotic culture growth. This project leverages the ESP32-S3 to provide high-precision monitoring and control of pH, Optical Density (OD), and feeding cycles. Designed for **academic research**, **pedagogical demonstrations**, and **advanced bio-production**.
 
 ## Features
 
@@ -52,6 +52,8 @@ An advanced, open-source automated fermentation system optimized for probiotic c
 - **OTA Support**: Firmware can be updated wirelessly using the Arduino IDE or PlatformIO.
 
 ### Suggested Future Improvements
+- **Metabolic Activity Detection**: Integration of CO2/O2 exhaust gas analysis to estimate real-time metabolic flux.
+- **Bacteriocin Monitoring & Harvesting**: Automated sampling and fraction collection systems for studying antimicrobial peptides.
 - **MQTT Integration**: For cloud-based data logging and multi-bioreactor management.
 - **Advanced PID**: Fine-tuning of Ki and Kd parameters for even tighter pH control.
 - **Oxygen Control**: Integration of a DO (Dissolved Oxygen) sensor and air pump control.
