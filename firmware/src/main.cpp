@@ -90,6 +90,7 @@ void setup() {
   pinMode(OD_LIGHT_PIN, OUTPUT);
   pinMode(HEATER_PIN, OUTPUT);
   pinMode(STIRRER_PIN, OUTPUT);
+  pinMode(TOUCH_BUTTON_PIN, INPUT);
   pinMode(STATUS_LED, OUTPUT);
   emergencyStop(); // Ensure all pumps off at start
 
@@ -171,6 +172,13 @@ void loop() {
     } else {
       emergencyStop();
     }
+  }
+
+  // Manual touch button logic
+  if (digitalRead(TOUCH_BUTTON_PIN) == HIGH && !nutrientPumpActive) {
+    nutrientPumpActive = true;
+    nutrientPumpStartTime = currentMillis;
+    digitalWrite(PUMP_NUTRIENT_PIN, HIGH);
   }
 
   // Feeding logic (Non-blocking)

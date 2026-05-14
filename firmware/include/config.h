@@ -14,6 +14,7 @@
 #define TEMP_SENSOR_PIN 14
 #define HEATER_PIN 15
 #define STIRRER_PIN 16
+#define TOUCH_BUTTON_PIN 17
 
 #define STATUS_LED 21
 

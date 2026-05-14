@@ -7,6 +7,7 @@
 | ESP32-S3-WROOM-1 | Main Microcontroller | 1 |
 | ADS1115 | 16-bit 4-Channel I2C ADC | 1 |
 | DS3231 | High Precision I2C RTC | 1 |
+| TTP223B | Capacitive Touch Button Module | 1 |
 | pH Probe + Module | Industrial Grade BNC Probe | 1 |
 | Photodiode | Silicon Photodiode for OD | 1 |
 | 650nm Laser / 600nm LED | Light Source for OD | 1 |
@@ -28,6 +29,7 @@
 | OneWire (Temp) | GPIO 14 | - |
 | Heater (PWM/MOSFET) | GPIO 15 | - |
 | Stirrer (PWM) | GPIO 16 | - |
+| Touch Button (TTP223B) | GPIO 17 | - |
 | Status LED | GPIO 21 | - |
 
 ## Light Source Options for OD600
