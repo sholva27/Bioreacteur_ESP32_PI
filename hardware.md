@@ -50,9 +50,8 @@ While "OD600" strictly refers to 600nm (Amber/Orange light), different sources c
 
 ### 1. Heating
 For maintaining culture temperature (typically 30-45°C), the following are recommended:
-- **12V PTC Heating Element**: Self-regulating and safe. Mount on the side of the vessel.
-- **Silicone Heating Pad**: Flexible and provides even heat distribution.
-- **MOSFET Driver**: Use an **IRLZ44N** or similar logic-level MOSFET to control the heater via PWM from the ESP32.
+- **MK2Y 200mm Round Heatbed (12V)**: Ideal for supporting the fermentation vessel. It provides a large, even heating surface.
+- **MOSFET Driver**: Because the MK2Y draws ~10-12A at 12V, a high-current **External MOSFET Module** (often sold for 3D printers) or an **IRLB3034** with a heatsink is required. **Do not use small MOSFET modules.**
 
 ### 2. Stirring (Magnetic)
 - **DC Motor + Magnets**: A standard 12V DC motor with a 3D-printed magnet holder.
@@ -60,7 +59,7 @@ For maintaining culture temperature (typically 30-45°C), the following are reco
 - **L298N or MOSFET**: Used to control the motor speed via PWM.
 
 ### Wiring Note
-Heaters and motors can draw significant current (2-5A). Ensure your 12V power supply is rated for at least 10A and use thick gauge wire for the power paths.
+The MK2Y heatbed alone can draw ~10A. Combined with pumps and motors, ensure your 12V power supply is rated for at least **15A-20A**. Use thick gauge wire (14-16 AWG) for the heatbed power paths to prevent voltage drops and overheating.
 
 ## Temperature Sensor Options
 
