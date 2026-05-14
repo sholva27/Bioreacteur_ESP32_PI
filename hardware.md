@@ -27,6 +27,22 @@
 | Laser/LED Control | GPIO 13 | - |
 | Status LED | GPIO 21 | - |
 
+## Light Source Options for OD600
+
+While "OD600" strictly refers to 600nm (Amber/Orange light), different sources can be used depending on precision requirements and availability:
+
+| Source | Wavelength | Type | Pros | Cons |
+|--------|------------|------|------|------|
+| **Standard Laser** | 650nm | Red Laser | Extremely cheap, pre-collimated, high intensity | Not exactly 600nm; absorption spectra may differ |
+| **Precision Laser** | 635nm | Red Laser | Closer to 600nm than standard lasers | Slightly higher cost than 650nm |
+| **Amber LED** | 590-610nm | LED | Matches the standard 600nm wavelength perfectly | Requires aperture/lens for collimation; lower intensity |
+| **RGB LED** | Variable | LED | Flexible; can be tuned to Orange (R+G) | Low monochromaticity; spectral drift with temperature |
+
+### Recommendations
+- **For Standard Use (OD600 Proxy)**: The **650nm Laser Module** you mentioned is perfectly acceptable for tracking growth curves, as long as the same source is used for the entire experiment.
+- **For Scientific Accuracy**: A **600nm Amber LED** (e.g., Kingbright or Osram) is preferred. To use it effectively, mount it inside a black 3D-printed tube with a small aperture (1-2mm) to mimic a beam.
+- **For Research**: If comparing results with published literature, using a source closer to 600nm (like a 600nm LED) ensures that the extinction coefficients match standard values.
+
 ## Sensor Options for OD600
 
 While the **OPT101** (Photodiode + Integrated Amp) is an excellent choice for its simplicity and linear response, here are other accessible and cost-effective alternatives:
