@@ -27,6 +27,22 @@
 | Laser/LED Control | GPIO 13 | - |
 | Status LED | GPIO 21 | - |
 
+## Sensor Options for OD600
+
+While the **OPT101** (Photodiode + Integrated Amp) is an excellent choice for its simplicity and linear response, here are other accessible and cost-effective alternatives:
+
+| Sensor | Type | Pros | Cons |
+|--------|------|------|------|
+| **TSL2591** | Digital (I2C) | Very high dynamic range (600M:1), No ADC needed | Fixed gain steps can be tricky for precise OD |
+| **AS7262** | Spectral (I2C) | 6-channel detection, can target 600nm specifically | Slightly more expensive, 16-bit resolution |
+| **BPW34 + Op-Amp** | Analog | Extremely cheap, customizable gain | Requires external Transimpedance Amp (TIA) circuit |
+| **TEMT6000** | Analog | Very common, cheap | Senses visible light, less sensitive at 600nm than BPW34 |
+
+### Recommendations for Research/Pedagogy
+- **For Simplicity**: Stick with **OPT101** as it minimizes external circuitry.
+- **For Accuracy**: Use **AS7262** as it allows you to subtract background noise from other wavelengths.
+- **For Low Cost**: A **BPW34** photodiode with a precision op-amp (e.g., AD8605 or even a basic TL072) provides the most flexibility for DIY builds.
+
 ## Sensor Configuration
 
 ### ADS1115 I2C Address: 0x48
