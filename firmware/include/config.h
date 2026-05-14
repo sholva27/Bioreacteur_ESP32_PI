@@ -12,6 +12,8 @@
 #define PUMP_NUTRIENT_PIN 12
 #define OD_LIGHT_PIN 13
 #define TEMP_SENSOR_PIN 14
+#define HEATER_PIN 15
+#define STIRRER_PIN 16
 
 #define STATUS_LED 21
 
@@ -22,6 +24,8 @@
 // System Constants
 #define PH_TARGET 7.0
 #define PH_HYSTERESIS 0.1
+#define TEMP_TARGET 37.0
+#define STIRRER_SPEED_DEFAULT 128
 #define FEEDING_INTERVAL_MS 3600000 // 1 hour
 #define FEEDING_DURATION_MS 5000     // 5 seconds
 #define OD_CALIBRATION_FACTOR 1.0

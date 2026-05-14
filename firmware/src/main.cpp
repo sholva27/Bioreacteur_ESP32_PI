@@ -23,6 +23,8 @@ AsyncWebServer server(80);
 // Global state
 float phTarget = PH_TARGET;
 float phHysteresis = PH_HYSTERESIS;
+float tempTarget = TEMP_TARGET;
+int stirrerSpeed = STIRRER_SPEED_DEFAULT;
 long feedingInterval = FEEDING_INTERVAL_MS;
 
 float currentPH = 0.0;
@@ -49,6 +51,7 @@ float phIntegral = 0.0, lastPhError = 0.0;
 // Function prototypes
 void updateSensors();
 void controlPH();
+void controlTemp();
 void controlFeeding();
 void logData();
 String getTelemetryJSON();
@@ -85,6 +88,8 @@ void setup() {
   pinMode(PUMP_BASE_PIN, OUTPUT);
   pinMode(PUMP_NUTRIENT_PIN, OUTPUT);
   pinMode(OD_LIGHT_PIN, OUTPUT);
+  pinMode(HEATER_PIN, OUTPUT);
+  pinMode(STIRRER_PIN, OUTPUT);
   pinMode(STATUS_LED, OUTPUT);
   emergencyStop(); // Ensure all pumps off at start
 
@@ -126,6 +131,8 @@ void setup() {
     StaticJsonDocument<200> doc;
     doc["phTarget"] = phTarget;
     doc["phHysteresis"] = phHysteresis;
+    doc["tempTarget"] = tempTarget;
+    doc["stirrerSpeed"] = stirrerSpeed;
     doc["feedingInterval"] = feedingInterval;
     String output;
     serializeJson(doc, output);
@@ -137,6 +144,8 @@ void setup() {
     deserializeJson(doc, (const char*)data);
     if(doc.containsKey("phTarget")) phTarget = doc["phTarget"];
     if(doc.containsKey("phHysteresis")) phHysteresis = doc["phHysteresis"];
+    if(doc.containsKey("tempTarget")) tempTarget = doc["tempTarget"];
+    if(doc.containsKey("stirrerSpeed")) stirrerSpeed = doc["stirrerSpeed"];
     if(doc.containsKey("feedingInterval")) feedingInterval = doc["feedingInterval"];
     saveSettings();
     request->send(200, "text/plain", "OK");
@@ -158,6 +167,7 @@ void loop() {
     // Control logic dependent on fresh sensor data
     if (!sensorError) {
       controlPH();
+      controlTemp();
     } else {
       emergencyStop();
     }
@@ -177,6 +187,17 @@ void loop() {
   if (currentMillis - lastToggle >= 500) {
     digitalWrite(STATUS_LED, !digitalRead(STATUS_LED));
     lastToggle = currentMillis;
+  }
+
+  // Stirrer control (simple PWM)
+  analogWrite(STIRRER_PIN, stirrerSpeed);
+}
+
+void controlTemp() {
+  if (currentTemp < tempTarget) {
+    digitalWrite(HEATER_PIN, HIGH);
+  } else {
+    digitalWrite(HEATER_PIN, LOW);
   }
 }
 
@@ -312,6 +333,8 @@ void emergencyStop() {
   digitalWrite(PUMP_ACID_PIN, LOW);
   digitalWrite(PUMP_BASE_PIN, LOW);
   digitalWrite(PUMP_NUTRIENT_PIN, LOW);
+  digitalWrite(HEATER_PIN, LOW);
+  analogWrite(STIRRER_PIN, 0);
 }
 
 void loadSettings() {
@@ -321,6 +344,8 @@ void loadSettings() {
   deserializeJson(doc, file);
   phTarget = doc["phTarget"] | PH_TARGET;
   phHysteresis = doc["phHysteresis"] | PH_HYSTERESIS;
+  tempTarget = doc["tempTarget"] | TEMP_TARGET;
+  stirrerSpeed = doc["stirrerSpeed"] | STIRRER_SPEED_DEFAULT;
   feedingInterval = doc["feedingInterval"] | FEEDING_INTERVAL_MS;
   file.close();
 }
@@ -331,6 +356,8 @@ void saveSettings() {
   StaticJsonDocument<200> doc;
   doc["phTarget"] = phTarget;
   doc["phHysteresis"] = phHysteresis;
+  doc["tempTarget"] = tempTarget;
+  doc["stirrerSpeed"] = stirrerSpeed;
   doc["feedingInterval"] = feedingInterval;
   serializeJson(doc, file);
   file.close();

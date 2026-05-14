@@ -48,6 +48,8 @@ const char index_html[] PROGMEM = R"rawliteral(
   <div class="card">
     <h2>Configuration</h2>
     <label>pH Target:</label> <input type="number" id="target-ph" step="0.1"><br>
+    <label>Temp Target:</label> <input type="number" id="target-temp" step="0.5"><br>
+    <label>Stirrer Speed (0-255):</label> <input type="number" id="stirrer-speed"><br>
     <button onclick="updateSettings()">Save Settings</button>
     <button class="btn-download" onclick="window.location.href='/download_log'">Download Log</button>
     <button onclick="togglePump('nutrient')">Manual Feed</button>
@@ -86,12 +88,16 @@ const char index_html[] PROGMEM = R"rawliteral(
     function loadSettings() {
       fetch('/settings').then(r => r.json()).then(data => {
         document.getElementById('target-ph').value = data.phTarget;
+        document.getElementById('target-temp').value = data.tempTarget;
+        document.getElementById('stirrer-speed').value = data.stirrerSpeed;
       });
     }
 
     function updateSettings() {
       var settings = {
-        phTarget: parseFloat(document.getElementById('target-ph').value)
+        phTarget: parseFloat(document.getElementById('target-ph').value),
+        tempTarget: parseFloat(document.getElementById('target-temp').value),
+        stirrerSpeed: parseInt(document.getElementById('stirrer-speed').value)
       };
       fetch('/set', {
         method: 'POST',

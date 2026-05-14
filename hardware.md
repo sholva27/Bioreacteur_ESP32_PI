@@ -26,6 +26,8 @@
 | Pump Nutrients (PWM) | GPIO 12 | - |
 | Laser/LED Control | GPIO 13 | - |
 | OneWire (Temp) | GPIO 14 | - |
+| Heater (PWM/MOSFET) | GPIO 15 | - |
+| Stirrer (PWM) | GPIO 16 | - |
 | Status LED | GPIO 21 | - |
 
 ## Light Source Options for OD600
@@ -43,6 +45,22 @@ While "OD600" strictly refers to 600nm (Amber/Orange light), different sources c
 - **For Standard Use (OD600 Proxy)**: The **650nm Laser Module** you mentioned is perfectly acceptable for tracking growth curves, as long as the same source is used for the entire experiment.
 - **For Scientific Accuracy**: A **600nm Amber LED** (e.g., Kingbright or Osram) is preferred. To use it effectively, mount it inside a black 3D-printed tube with a small aperture (1-2mm) to mimic a beam.
 - **For Research**: If comparing results with published literature, using a source closer to 600nm (like a 600nm LED) ensures that the extinction coefficients match standard values.
+
+## Heating and Stirring Solutions
+
+### 1. Heating
+For maintaining culture temperature (typically 30-45°C), the following are recommended:
+- **12V PTC Heating Element**: Self-regulating and safe. Mount on the side of the vessel.
+- **Silicone Heating Pad**: Flexible and provides even heat distribution.
+- **MOSFET Driver**: Use an **IRLZ44N** or similar logic-level MOSFET to control the heater via PWM from the ESP32.
+
+### 2. Stirring (Magnetic)
+- **DC Motor + Magnets**: A standard 12V DC motor with a 3D-printed magnet holder.
+- **Magnetic Stir Bar**: Placed inside the bioreactor vessel.
+- **L298N or MOSFET**: Used to control the motor speed via PWM.
+
+### Wiring Note
+Heaters and motors can draw significant current (2-5A). Ensure your 12V power supply is rated for at least 10A and use thick gauge wire for the power paths.
 
 ## Temperature Sensor Options
 
