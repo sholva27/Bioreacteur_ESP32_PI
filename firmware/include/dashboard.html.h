@@ -6,9 +6,11 @@ const char index_html[] PROGMEM = R"rawliteral(
 <head>
   <title>Probiotic Biofermenter</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body { font-family: Arial; text-align: center; margin:0px auto; padding-top: 30px; background-color: #f4f7f6; }
-    .card { background-color: white; box-shadow: 2px 2px 12px 1px rgba(140,140,140,.5); padding: 20px; width: 300px; display: inline-block; margin: 10px; border-radius: 10px;}
+    .card { background-color: white; box-shadow: 2px 2px 12px 1px rgba(140,140,140,.5); padding: 20px; width: 300px; display: inline-block; margin: 10px; border-radius: 10px; vertical-align: top;}
+    .chart-container { width: 80%; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 2px 2px 12px 1px rgba(140,140,140,.5); margin-top: 20px;}
     h2 { color: #003366; }
     .value { font-size: 2.5rem; font-weight: bold; color: #2c3e50; }
     .unit { font-size: 1.2rem; color: #7f8c8d; }
@@ -18,8 +20,8 @@ const char index_html[] PROGMEM = R"rawliteral(
     button:focus-visible { outline: 3px solid #f39c12; outline-offset: 2px; }
     button:disabled { background-color: #bdc3c7; cursor: not-allowed; transform: none; }
     .btn-download { background-color: #27ae60; }
-    .btn-download:hover { background-color: #219150; }
-    .status-error { color: #e74c3c; font-weight: bold; padding: 10px; border: 2px solid #e74c3c; border-radius: 5px; margin: 10px; }
+    .status-error { color: #e74c3c; font-weight: bold; }
+    input { padding: 8px; width: 60px; margin: 5px; }
   </style>
 </head>
 <body>
@@ -37,56 +39,158 @@ const char index_html[] PROGMEM = R"rawliteral(
   </div>
 
   <div class="card">
-    <h2>Actions</h2>
-    <button id="feed-btn" onclick="togglePump('nutrient')" aria-label="Manual nutrient feeding pulse">Manual Feed</button>
-    <button class="btn-download" onclick="window.location.href='/download_log'" aria-label="Download historical data as CSV">Download CSV Log</button>
+    <h2>Temperature</h2>
+    <p><span class="value" id="temp">--</span> <span class="unit">°C</span></p>
+  </div>
+
+  <div class="card">
+    <h2>Growth Rate (µ)</h2>
+    <p><span class="value" id="mu">--</span> <span class="unit">h⁻¹</span></p>
+  </div>
+
+  <div class="card">
+    <h2>Configuration</h2>
+    <label>pH Target:</label> <input type="number" id="target-ph" step="0.1"><br>
+    <label>Temp Target:</label> <input type="number" id="target-temp" step="0.5"><br>
+    <label>Stirrer Speed (0-255):</label> <input type="number" id="stirrer-speed"><br>
+    <label>Kp:</label> <input type="number" id="kp"><br>
+    <label>Ki:</label> <input type="number" id="ki"><br>
+    <label>Kd:</label> <input type="number" id="kd"><br>
+    <hr>
+    <label>Enable MQTT:</label> <input type="checkbox" id="mqtt-enabled"><br>
+    <label>MQTT Broker:</label> <input type="text" id="mqtt-broker"><br>
+    <button onclick="updateSettings()">Save Settings</button>
+    <button class="btn-download" onclick="window.location.href='/download_log'">Download Log</button>
+    <button onclick="togglePump('nutrient')">Manual Feed</button>
+  </div>
+
+  <div class="card">
+    <h2>Calibration</h2>
+    <p>pH (Current Volts: <span id="ph-v">--</span>)</p>
+    <button onclick="calibratePH(7.0)">Calibrate pH 7.0</button>
+    <button onclick="calibratePH(4.0)">Calibrate pH 4.0</button>
+    <p>OD (Current Volts: <span id="od-v">--</span>)</p>
+    <button onclick="calibrateODZero()">Set OD Blank (Zero)</button>
+  </div>
+
+  <div class="chart-container">
+    <canvas id="bioChart"></canvas>
   </div>
 
   <script>
-    setInterval(function ( ) {
-      var xhttp = new XMLHttpRequest();
-      xhttp.onreadystatechange = function() {
-        if (this.readyState == 4 && this.status == 200) {
-          var data = JSON.parse(this.responseText);
-          document.getElementById("ph").innerHTML = data.ph.toFixed(2);
-          document.getElementById("od").innerHTML = data.od.toFixed(3);
-          if (data.error) {
-            document.getElementById("error-msg").style.display = "block";
-          } else {
-            document.getElementById("error-msg").style.display = "none";
-          }
+    var ctx = document.getElementById('bioChart').getContext('2d');
+    var chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'pH',
+                borderColor: '#3498db',
+                data: [],
+                yAxisID: 'y'
+            }, {
+                label: 'OD',
+                borderColor: '#e67e22',
+                data: [],
+                yAxisID: 'y1'
+            }]
+        },
+        options: {
+            scales: {
+                y: { type: 'linear', position: 'left' },
+                y1: { type: 'linear', position: 'right', grid: { drawOnChartArea: false } }
+            }
         }
-      };
-      xhttp.open("GET", "/data", true);
-      xhttp.send();
-    }, 2000 ) ;
+    });
 
-    function togglePump(pump) {
-      const btn = document.getElementById('feed-btn');
-      const originalText = btn.innerHTML;
-
-      btn.disabled = true;
-      btn.innerHTML = 'Feeding...';
-
-      var xhttp = new XMLHttpRequest();
-      xhttp.onreadystatechange = function() {
-        if (this.readyState == 4) {
-          if (this.status == 200) {
-            // Keep disabled for 5s to match firmware duration
-            setTimeout(() => {
-              btn.disabled = false;
-              btn.innerHTML = originalText;
-            }, 5000);
-          } else {
-            btn.disabled = false;
-            btn.innerHTML = originalText;
-            alert('Failed to trigger pump. Check connection.');
-          }
-        }
-      };
-      xhttp.open("GET", "/pump?type=" + pump, true);
-      xhttp.send();
+    function loadSettings() {
+      fetch('/settings').then(r => r.json()).then(data => {
+        document.getElementById('target-ph').value = data.phTarget;
+        document.getElementById('target-temp').value = data.tempTarget;
+        document.getElementById('stirrer-speed').value = data.stirrerSpeed;
+        document.getElementById('kp').value = data.kp;
+        document.getElementById('ki').value = data.ki;
+        document.getElementById('kd').value = data.kd;
+        document.getElementById('mqtt-enabled').checked = data.mqttEnabled;
+        document.getElementById('mqtt-broker').value = data.mqttBroker;
+      });
     }
+
+    var lastPh7V = 0;
+    var lastPh4V = 0;
+
+    function calibratePH(value) {
+       fetch('/data').then(r => r.json()).then(data => {
+          if (value == 7.0) {
+            lastPh7V = data.ph_v;
+            alert("pH 7.0 set to " + lastPh7V + "V. Now place in pH 4.0 and calibrate.");
+            updateSettings({phOffset: -lastPh7V});
+          } else if (value == 4.0) {
+            lastPh4V = data.ph_v;
+            var newSlope = 3.0 / (lastPh7V - lastPh4V);
+            var newOffset = 0 - (lastPh7V * newSlope);
+            updateSettings({phSlope: newSlope, phOffset: newOffset});
+            alert("pH Calibrated! Slope: " + newSlope.toFixed(2));
+          }
+       });
+    }
+
+    function calibrateODZero() {
+       fetch('/data').then(r => r.json()).then(data => {
+          updateSettings({odZero: data.od_v});
+          alert("OD Blank set to " + data.od_v + "V");
+       });
+    }
+
+    function updateSettings(extra = {}) {
+      fetch('/settings').then(r => r.json()).then(data => {
+        var settings = data;
+        settings.mqttEnabled = document.getElementById('mqtt-enabled').checked;
+        settings.mqttBroker = document.getElementById('mqtt-broker').value;
+        settings.phTarget = parseFloat(document.getElementById('target-ph').value);
+        settings.tempTarget = parseFloat(document.getElementById('target-temp').value);
+        settings.stirrerSpeed = parseInt(document.getElementById('stirrer-speed').value);
+        settings.kp = parseFloat(document.getElementById('kp').value);
+        settings.ki = parseFloat(document.getElementById('ki').value);
+        settings.kd = parseFloat(document.getElementById('kd').value);
+
+        Object.assign(settings, extra);
+        fetch('/set', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(settings)
+        }).then(() => { if (!Object.keys(extra).length) alert("Settings Updated Successfully"); });
+      });
+    }
+
+    setInterval(function ( ) {
+      fetch('/data').then(r => r.json()).then(data => {
+        document.getElementById("ph").innerHTML = data.ph.toFixed(2);
+        document.getElementById("od").innerHTML = data.od.toFixed(3);
+        document.getElementById("temp").innerHTML = data.temp.toFixed(1);
+        document.getElementById("mu").innerHTML = data.mu.toFixed(2);
+        document.getElementById("ph-v").innerHTML = data.ph_v.toFixed(4);
+        document.getElementById("od-v").innerHTML = data.od_v.toFixed(4);
+
+        // Update Chart
+        var now = new Date().toLocaleTimeString();
+        chart.data.labels.push(now);
+        chart.data.datasets[0].data.push(data.ph);
+        chart.data.datasets[1].data.push(data.od);
+        if(chart.data.labels.length > 20) {
+          chart.data.labels.shift();
+          chart.data.datasets[0].data.shift();
+          chart.data.datasets[1].data.shift();
+        }
+        chart.update();
+
+        if (data.error) document.getElementById("error-msg").style.display = "block";
+        else document.getElementById("error-msg").style.display = "none";
+      });
+    }, 5000);
+
+    function togglePump(pump) { fetch("/pump?type=" + pump); }
+    window.onload = loadSettings;
   </script>
 </body>
 </html>
