@@ -17,6 +17,11 @@
 | Peristaltic Pump | 12V 0-100mL/min | 3 |
 | Buck Converter | 12V to 5V (for sensors) | 1 |
 | LDO Regulator | 5V to 3.3V (for ESP32) | 1 |
+| 12V 20A PSU | Main Power Supply (e.g. Mean Well) | 1 |
+| Fuse Holder | 12V Blade type | 2 |
+| Fuses | 20A (main), 15A (heater), 5A (logic) | 1 set |
+| 1N4007 Diode | Flyback protection for pumps | 4 |
+| Thermal Fuse | 70°C Thermal Cutoff for safety | 1 |
 
 ## Pinout Mapping (ESP32-S3)
 
@@ -124,6 +129,29 @@ While the **OPT101** (Photodiode + Integrated Amp) is an excellent choice for it
 1. **Isolation**: It is highly recommended to use an I2C isolator (like ADUM1250) for the pH probe to avoid ground loops if the system is connected to mains-powered equipment.
 2. **OD Path**: The Laser/LED and Photodiode should be mounted opposite each other across a 10mm clear flow cell or tube.
 3. **Power**: Ensure the 12V power supply can handle the peak current of 3 pumps simultaneously (~2-3A).
+
+## Power and Protection Recommendations
+
+### 1. Power Supply (PSU) Selection
+The system requires a stable **12V DC** source. Given that the MK2Y heatbed draws ~10A and pumps/stirrer draw another 2-3A, a **20A (240W)** power supply is highly recommended.
+- **Recommended Model**: **Mean Well LRS-250-12** or similar industrial-grade enclosed switching PSU.
+- **Noise Mitigation**: High-precision sensors (pH and OD) are sensitive to ripple. Ensure the buck converter for the 5V rail has adequate output capacitance (e.g., 470uF Low-ESR).
+
+### 2. Electrical Protection
+Protecting the sensitive ESP32-S3 and high-current actuators is critical for long-term fermentation (which can run for days).
+- **Main Fusing**: Install a **20A Blade Fuse** or Circuit Breaker on the 12V positive rail immediately after the PSU.
+- **Branch Protection**:
+    - **Heater**: 15A fuse.
+    - **Pumps & ESP32**: 5A fuse.
+- **Reverse Polarity**: Use a high-current Schottky diode (e.g., MBR20100) or a P-Channel MOSFET protection circuit if the PSU is not already protected.
+
+### 3. Inductive Load Protection (Flyback Diodes)
+Peristaltic pumps and magnetic stirrers are inductive loads. When turned off, they generate high-voltage spikes (back-EMF).
+- **Action**: Solder a **1N4007** or **UF4007** diode in parallel with each pump and the DC stirrer motor, with the cathode (stripe) towards the positive terminal. This protects your MOSFET/L298N drivers from burning out.
+
+### 4. Thermal and Environmental Safety
+- **Thermal Fuse**: For absolute safety, mount a **70°C Thermal Cutoff (TCO)** fuse in series with the heater power line, physically attached to the MK2Y heatbed. If software control fails, the TCO will permanently break the circuit.
+- **Grounding**: If using a metal enclosure, ensure the PSU ground (V-) and the chassis are properly earthed (PE) to prevent static buildup and EMI.
 
 ## Local Procurement (Algeria)
 
