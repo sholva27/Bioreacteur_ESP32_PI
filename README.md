@@ -67,6 +67,8 @@ For further inspiration and alternative architectures, check out these excellent
 - **[BREAD (Broadly Reconfigurable and Expandable Automation Device)](https://github.com/FEASTorg/BREADS)**: A modular, ESP32-based hardware framework designed for low-cost laboratory automation and SCADA-like functionality.
 - **[EvoluStat](https://github.com/onid-no-more/EvoluStat)**: An open-source automated continuous culture system (stat) for microbial evolution experiments.
 - **[Chi.Bio](https://github.com/harrison-steel/Chi.Bio)**: An open-lab-hardware platform for biological characterization and manipulation, featuring advanced optical and thermal control.
+- **[NinjaPBR](https://github.com/roblehmann/NinjaPBR)**: An open-source photobioreactor designed for studying microalgae and cyanobacteria growth.
+- **[IRNAS Modular Bioreactor](https://github.com/IRNAS/newharvest-modular-bioreactor-v2)**: A modular system for muscle tissue engineering, emphasizing low-cost and ease of replication.
 
 ## License
 
