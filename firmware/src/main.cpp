@@ -33,9 +33,16 @@ float tempTarget = TEMP_TARGET;
 int stirrerSpeed = STIRRER_SPEED_DEFAULT;
 long feedingInterval = FEEDING_INTERVAL_MS;
 
+// Calibration Data
+float phOffset = 0.0;
+float phSlope = 1.0;
+float odZeroVoltage = 0.0;
+
 float currentPH = 0.0;
 float currentOD = 0.0;
 float currentTemp = 0.0;
+float currentPH_V = 0.0;
+float currentOD_V = 0.0;
 float growthRate = 0.0; // Specific growth rate (mu)
 
 float lastOD = 0.0;
@@ -138,7 +145,7 @@ void setup() {
   });
 
   server.on("/settings", HTTP_GET, [](AsyncWebServerRequest *request){
-    StaticJsonDocument<512> doc;
+    StaticJsonDocument<1024> doc;
     doc["phTarget"] = phTarget;
     doc["phHysteresis"] = phHysteresis;
     doc["tempTarget"] = tempTarget;
@@ -147,13 +154,18 @@ void setup() {
     doc["kp"] = Kp;
     doc["ki"] = Ki;
     doc["kd"] = Kd;
+    doc["phOffset"] = phOffset;
+    doc["phSlope"] = phSlope;
+    doc["odZero"] = odZeroVoltage;
+    doc["mqttBroker"] = mqttBroker;
+    doc["mqttEnabled"] = mqttEnabled;
     String output;
     serializeJson(doc, output);
     request->send(200, "application/json", output);
   });
 
   server.on("/set", HTTP_POST, [](AsyncWebServerRequest *request){}, NULL, [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total){
-    StaticJsonDocument<512> doc;
+    StaticJsonDocument<1024> doc;
     deserializeJson(doc, (const char*)data);
     if(doc.containsKey("phTarget")) phTarget = doc["phTarget"];
     if(doc.containsKey("phHysteresis")) phHysteresis = doc["phHysteresis"];
@@ -163,6 +175,11 @@ void setup() {
     if(doc.containsKey("kp")) Kp = doc["kp"];
     if(doc.containsKey("ki")) Ki = doc["ki"];
     if(doc.containsKey("kd")) Kd = doc["kd"];
+    if(doc.containsKey("mqttBroker")) mqttBroker = doc["mqttBroker"].as<String>();
+    if(doc.containsKey("mqttEnabled")) mqttEnabled = doc["mqttEnabled"];
+    if(doc.containsKey("phOffset")) phOffset = doc["phOffset"];
+    if(doc.containsKey("phSlope")) phSlope = doc["phSlope"];
+    if(doc.containsKey("odZero")) odZeroVoltage = doc["odZero"];
     saveSettings();
     request->send(200, "text/plain", "OK");
   });
@@ -251,25 +268,28 @@ void updateSensors() {
      return;
   }
   // 0.0001875 is the voltage step for +/- 6.144V range
-  currentPH = 7.0 + ((float)phRaw * 0.0001875);
+  currentPH_V = (float)phRaw * 0.0001875;
+  currentPH = 7.0 + (currentPH_V * phSlope) + phOffset;
 
   // Read OD
   digitalWrite(OD_LIGHT_PIN, HIGH);
-  // We'll use a small delay here as it's very short and inside a 2s interval loop
-  // but for pure non-blocking, we could split this into two states.
   delayMicroseconds(500);
   int16_t odRaw = ads.readADC_SingleEnded(ADS_OD_CH);
   digitalWrite(OD_LIGHT_PIN, LOW);
 
   // OD Calculation with guard
-  if (odRaw > 10) { // Avoid division by zero or log of zero
-    currentOD = log10(32768.0 / (float)odRaw) * OD_CALIBRATION_FACTOR;
+  currentOD_V = (float)odRaw * 0.0001875;
+  if (currentOD_V > 0.001) {
+    if (odZeroVoltage > 0.1) {
+      currentOD = log10(odZeroVoltage / currentOD_V) * OD_CALIBRATION_FACTOR;
+    } else {
+      currentOD = 0.0;
+    }
   } else {
     currentOD = 4.0; // Max out at high density
   }
 
   // Growth Rate Estimation (Specific Growth Rate mu)
-  // mu = (ln(OD2) - ln(OD1)) / (t2 - t1)
   if (lastODTime > 0 && currentOD > 0.05 && lastOD > 0.05) {
      float dt = (currentMillis - lastODTime) / 3600000.0; // dt in hours
      if (dt > 0.1) { // Every 6 minutes
@@ -292,7 +312,6 @@ void controlPH() {
   static unsigned long lastUpdate = 0;
   float dt = (currentMillis - lastUpdate) / 1000.0;
 
-  // Proportional control with deadband (hysteresis)
   if (abs(error) < phHysteresis) {
     digitalWrite(PUMP_ACID_PIN, LOW);
     digitalWrite(PUMP_BASE_PIN, LOW);
@@ -305,12 +324,9 @@ void controlPH() {
   if (dt > 0) {
     phIntegral += error * dt;
     float phDerivative = (error - lastPhError) / dt;
-
-    // PID Output (in milliseconds of pump on-time)
     float pidOutput = (Kp * error) + (Ki * phIntegral) + (Kd * phDerivative);
     pidOutput = abs(pidOutput);
 
-    // Time-Proportional Cycle (e.g., 10 seconds)
     static unsigned long lastCycleStart = 0;
     unsigned long cycleTime = currentMillis - lastCycleStart;
     if (cycleTime >= 10000) {
@@ -318,14 +334,13 @@ void controlPH() {
       cycleTime = 0;
     }
 
-    // Limit pump on-time to max 50% of cycle (5s) for safety
     unsigned long pumpDuration = min((unsigned long)pidOutput, 5000UL);
 
-    if (error > 0) { // Too alkaline, pulse acid pump
+    if (error > 0) {
       if (cycleTime < pumpDuration) digitalWrite(PUMP_ACID_PIN, HIGH);
       else digitalWrite(PUMP_ACID_PIN, LOW);
       digitalWrite(PUMP_BASE_PIN, LOW);
-    } else { // Too acidic, pulse base pump
+    } else {
       if (cycleTime < pumpDuration) digitalWrite(PUMP_BASE_PIN, HIGH);
       else digitalWrite(PUMP_BASE_PIN, LOW);
       digitalWrite(PUMP_ACID_PIN, LOW);
@@ -338,16 +353,12 @@ void controlPH() {
 
 void controlFeeding() {
   unsigned long currentMillis = millis();
-
-  // Trigger scheduled feeding
   if (currentMillis - lastFeedingTime > (unsigned long)feedingInterval) {
     nutrientPumpActive = true;
     nutrientPumpStartTime = currentMillis;
     digitalWrite(PUMP_NUTRIENT_PIN, HIGH);
     lastFeedingTime = currentMillis;
   }
-
-  // Handle pump duration
   if (nutrientPumpActive && (currentMillis - nutrientPumpStartTime >= FEEDING_DURATION_MS)) {
     digitalWrite(PUMP_NUTRIENT_PIN, LOW);
     nutrientPumpActive = false;
@@ -356,13 +367,8 @@ void controlFeeding() {
 
 void logData() {
   if (sensorError) return;
-
   File file = SPIFFS.open("/log.csv", FILE_APPEND);
-  if(!file){
-    Serial.println("Failed to open file for appending");
-    return;
-  }
-
+  if(!file) return;
   DateTime now = rtc.now();
   file.print(now.timestamp());
   file.print(",");
@@ -427,6 +433,9 @@ void loadSettings() {
   Kp = doc["kp"] | 100.0;
   Ki = doc["ki"] | 0.0;
   Kd = doc["kd"] | 0.0;
+  phOffset = doc["phOffset"] | 0.0;
+  phSlope = doc["phSlope"] | 1.0;
+  odZeroVoltage = doc["odZero"] | 0.0;
   file.close();
 }
 
@@ -444,49 +453,29 @@ void saveSettings() {
   doc["kp"] = Kp;
   doc["ki"] = Ki;
   doc["kd"] = Kd;
+  doc["phOffset"] = phOffset;
+  doc["phSlope"] = phSlope;
+  doc["odZero"] = odZeroVoltage;
   serializeJson(doc, file);
   file.close();
 }
 
 void setupOTA() {
   ArduinoOTA.setHostname("biofermenter-esp32s3");
-  // ArduinoOTA.setPassword("admin"); // Optional
-
-  ArduinoOTA.onStart([]() {
-    String type;
-    if (ArduinoOTA.getCommand() == U_FLASH) type = "sketch";
-    else type = "filesystem";
-    Serial.println("Start updating " + type);
-  });
-  ArduinoOTA.onEnd([]() {
-    Serial.println("\nEnd");
-  });
-  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
-    Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
-  });
-  ArduinoOTA.onError([](ota_error_t error) {
-    Serial.printf("Error[%u]: ", error);
-    if (error == OTA_AUTH_ERROR) Serial.println("Auth Failed");
-    else if (error == OTA_BEGIN_ERROR) Serial.println("Begin Failed");
-    else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
-    else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
-    else if (error == OTA_END_ERROR) Serial.println("End Failed");
-  });
-
   ArduinoOTA.begin();
 }
 
 String getTelemetryJSON() {
-  StaticJsonDocument<200> doc;
+  StaticJsonDocument<512> doc;
   DateTime now = rtc.now();
-
   doc["ph"] = currentPH;
   doc["od"] = currentOD;
+  doc["ph_v"] = currentPH_V;
+  doc["od_v"] = currentOD_V;
   doc["temp"] = currentTemp;
   doc["mu"] = growthRate;
   doc["timestamp"] = now.timestamp();
   doc["error"] = sensorError;
-
   String output;
   serializeJson(doc, output);
   return output;

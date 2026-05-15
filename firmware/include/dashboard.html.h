@@ -61,6 +61,15 @@ const char index_html[] PROGMEM = R"rawliteral(
     <button onclick="togglePump('nutrient')">Manual Feed</button>
   </div>
 
+  <div class="card">
+    <h2>Calibration</h2>
+    <p>pH (Current Volts: <span id="ph-v">--</span>)</p>
+    <button onclick="calibratePH(7.0)">Calibrate pH 7.0</button>
+    <button onclick="calibratePH(4.0)">Calibrate pH 4.0</button>
+    <p>OD (Current Volts: <span id="od-v">--</span>)</p>
+    <button onclick="calibrateODZero()">Set OD Blank (Zero)</button>
+  </div>
+
   <div class="chart-container">
     <canvas id="bioChart"></canvas>
   </div>
@@ -122,12 +131,66 @@ const char index_html[] PROGMEM = R"rawliteral(
       });
     }
 
+    var lastPh7V = 0;
+    var lastPh4V = 0;
+
+    var lastPh7V = 0;
+    var lastPh4V = 0;
+
+    function calibratePH(value) {
+       fetch('/data').then(r => r.json()).then(data => {
+          if (value == 7.0) {
+            lastPh7V = data.ph_v;
+            alert("pH 7.0 set to " + lastPh7V + "V. Now place in pH 4.0 and calibrate.");
+            // Send new offset: 7.0 = 7.0 + (V*slope) + offset. If slope=1, offset = -V
+            updateSettings({phOffset: -lastPh7V});
+          } else if (value == 4.0) {
+            lastPh4V = data.ph_v;
+            // Calculate slope: (7-4) / (V7 - V4)
+            var newSlope = 3.0 / (lastPh7V - lastPh4V);
+            var newOffset = 0 - (lastPh7V * newSlope); // pH 7.0 is 0V center in model
+            updateSettings({phSlope: newSlope, phOffset: newOffset});
+            alert("pH Calibrated! Slope: " + newSlope.toFixed(2));
+          }
+       });
+    }
+
+    function calibrateODZero() {
+       fetch('/data').then(r => r.json()).then(data => {
+          updateSettings({odZero: data.od_v});
+          alert("OD Blank set to " + data.od_v + "V");
+       });
+    }
+
+    function updateSettings(extra = {}) {
+      fetch('/settings').then(r => r.json()).then(data => {
+        var settings = data; // Start with current settings to preserve calibration values
+        settings.mqttEnabled = document.getElementById('mqtt-enabled').checked;
+        settings.mqttBroker = document.getElementById('mqtt-broker').value;
+        settings.phTarget = parseFloat(document.getElementById('target-ph').value);
+        settings.tempTarget = parseFloat(document.getElementById('target-temp').value);
+        settings.stirrerSpeed = parseInt(document.getElementById('stirrer-speed').value);
+        settings.kp = parseFloat(document.getElementById('kp').value);
+        settings.ki = parseFloat(document.getElementById('ki').value);
+        settings.kd = parseFloat(document.getElementById('kd').value);
+
+        Object.assign(settings, extra);
+        fetch('/set', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(settings)
+        }).then(() => alert("Settings Updated Successfully"));
+      });
+    }
+
     setInterval(function ( ) {
       fetch('/data').then(r => r.json()).then(data => {
         document.getElementById("ph").innerHTML = data.ph.toFixed(2);
         document.getElementById("od").innerHTML = data.od.toFixed(3);
         document.getElementById("temp").innerHTML = data.temp.toFixed(1);
         document.getElementById("mu").innerHTML = data.mu.toFixed(2);
+        document.getElementById("ph-v").innerHTML = data.ph_v.toFixed(4);
+        document.getElementById("od-v").innerHTML = data.od_v.toFixed(4);
 
         // Update Chart
         var now = new Date().toLocaleTimeString();
