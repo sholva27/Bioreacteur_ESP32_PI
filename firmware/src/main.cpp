@@ -129,25 +129,31 @@ void setup() {
   });
 
   server.on("/settings", HTTP_GET, [](AsyncWebServerRequest *request){
-    StaticJsonDocument<200> doc;
+    StaticJsonDocument<512> doc;
     doc["phTarget"] = phTarget;
     doc["phHysteresis"] = phHysteresis;
     doc["tempTarget"] = tempTarget;
     doc["stirrerSpeed"] = stirrerSpeed;
     doc["feedingInterval"] = feedingInterval;
+    doc["kp"] = Kp;
+    doc["ki"] = Ki;
+    doc["kd"] = Kd;
     String output;
     serializeJson(doc, output);
     request->send(200, "application/json", output);
   });
 
   server.on("/set", HTTP_POST, [](AsyncWebServerRequest *request){}, NULL, [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total){
-    StaticJsonDocument<200> doc;
+    StaticJsonDocument<512> doc;
     deserializeJson(doc, (const char*)data);
     if(doc.containsKey("phTarget")) phTarget = doc["phTarget"];
     if(doc.containsKey("phHysteresis")) phHysteresis = doc["phHysteresis"];
     if(doc.containsKey("tempTarget")) tempTarget = doc["tempTarget"];
     if(doc.containsKey("stirrerSpeed")) stirrerSpeed = doc["stirrerSpeed"];
     if(doc.containsKey("feedingInterval")) feedingInterval = doc["feedingInterval"];
+    if(doc.containsKey("kp")) Kp = doc["kp"];
+    if(doc.containsKey("ki")) Ki = doc["ki"];
+    if(doc.containsKey("kd")) Kd = doc["kd"];
     saveSettings();
     request->send(200, "text/plain", "OK");
   });
@@ -265,35 +271,51 @@ void updateSensors() {
 
 void controlPH() {
   float error = currentPH - phTarget;
+  unsigned long currentMillis = millis();
+  static unsigned long lastUpdate = 0;
+  float dt = (currentMillis - lastUpdate) / 1000.0;
 
-  // Proportional control with hysteresis
+  // Proportional control with deadband (hysteresis)
   if (abs(error) < phHysteresis) {
     digitalWrite(PUMP_ACID_PIN, LOW);
     digitalWrite(PUMP_BASE_PIN, LOW);
-    phIntegral = 0; // Reset integral when in target
+    phIntegral = 0;
+    lastPhError = error;
+    lastUpdate = currentMillis;
     return;
   }
 
-  // Simple PWM-like control for pumps to prevent overshooting
-  // We'll use a fixed cycle of 10 seconds for pump titration
-  static unsigned long lastCycleStart = 0;
-  unsigned long cycleTime = millis() - lastCycleStart;
-  if (cycleTime >= 10000) {
-    lastCycleStart = millis();
-    cycleTime = 0;
-  }
+  if (dt > 0) {
+    phIntegral += error * dt;
+    float phDerivative = (error - lastPhError) / dt;
 
-  // Duration proportional to error (max 5s per 10s cycle)
-  unsigned long pumpDuration = min((unsigned long)(abs(error) * Kp), 5000UL);
+    // PID Output (in milliseconds of pump on-time)
+    float pidOutput = (Kp * error) + (Ki * phIntegral) + (Kd * phDerivative);
+    pidOutput = abs(pidOutput);
 
-  if (error > 0) { // Too basic, need acid
-    if (cycleTime < pumpDuration) digitalWrite(PUMP_ACID_PIN, HIGH);
-    else digitalWrite(PUMP_ACID_PIN, LOW);
-    digitalWrite(PUMP_BASE_PIN, LOW);
-  } else { // Too acidic, need base
-    if (cycleTime < pumpDuration) digitalWrite(PUMP_BASE_PIN, HIGH);
-    else digitalWrite(PUMP_BASE_PIN, LOW);
-    digitalWrite(PUMP_ACID_PIN, LOW);
+    // Time-Proportional Cycle (e.g., 10 seconds)
+    static unsigned long lastCycleStart = 0;
+    unsigned long cycleTime = currentMillis - lastCycleStart;
+    if (cycleTime >= 10000) {
+      lastCycleStart = currentMillis;
+      cycleTime = 0;
+    }
+
+    // Limit pump on-time to max 50% of cycle (5s) for safety
+    unsigned long pumpDuration = min((unsigned long)pidOutput, 5000UL);
+
+    if (error > 0) { // Too alkaline, pulse acid pump
+      if (cycleTime < pumpDuration) digitalWrite(PUMP_ACID_PIN, HIGH);
+      else digitalWrite(PUMP_ACID_PIN, LOW);
+      digitalWrite(PUMP_BASE_PIN, LOW);
+    } else { // Too acidic, pulse base pump
+      if (cycleTime < pumpDuration) digitalWrite(PUMP_BASE_PIN, HIGH);
+      else digitalWrite(PUMP_BASE_PIN, LOW);
+      digitalWrite(PUMP_ACID_PIN, LOW);
+    }
+
+    lastPhError = error;
+    lastUpdate = currentMillis;
   }
 }
 
@@ -348,25 +370,31 @@ void emergencyStop() {
 void loadSettings() {
   File file = SPIFFS.open("/settings.json", FILE_READ);
   if(!file) return;
-  StaticJsonDocument<200> doc;
+  StaticJsonDocument<512> doc;
   deserializeJson(doc, file);
   phTarget = doc["phTarget"] | PH_TARGET;
   phHysteresis = doc["phHysteresis"] | PH_HYSTERESIS;
   tempTarget = doc["tempTarget"] | TEMP_TARGET;
   stirrerSpeed = doc["stirrerSpeed"] | STIRRER_SPEED_DEFAULT;
   feedingInterval = doc["feedingInterval"] | FEEDING_INTERVAL_MS;
+  Kp = doc["kp"] | 100.0;
+  Ki = doc["ki"] | 0.0;
+  Kd = doc["kd"] | 0.0;
   file.close();
 }
 
 void saveSettings() {
   File file = SPIFFS.open("/settings.json", FILE_WRITE);
   if(!file) return;
-  StaticJsonDocument<200> doc;
+  StaticJsonDocument<512> doc;
   doc["phTarget"] = phTarget;
   doc["phHysteresis"] = phHysteresis;
   doc["tempTarget"] = tempTarget;
   doc["stirrerSpeed"] = stirrerSpeed;
   doc["feedingInterval"] = feedingInterval;
+  doc["kp"] = Kp;
+  doc["ki"] = Ki;
+  doc["kd"] = Kd;
   serializeJson(doc, file);
   file.close();
 }

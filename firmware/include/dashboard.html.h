@@ -50,6 +50,9 @@ const char index_html[] PROGMEM = R"rawliteral(
     <label>pH Target:</label> <input type="number" id="target-ph" step="0.1"><br>
     <label>Temp Target:</label> <input type="number" id="target-temp" step="0.5"><br>
     <label>Stirrer Speed (0-255):</label> <input type="number" id="stirrer-speed"><br>
+    <label>Kp:</label> <input type="number" id="kp"><br>
+    <label>Ki:</label> <input type="number" id="ki"><br>
+    <label>Kd:</label> <input type="number" id="kd"><br>
     <button onclick="updateSettings()">Save Settings</button>
     <button class="btn-download" onclick="window.location.href='/download_log'">Download Log</button>
     <button onclick="togglePump('nutrient')">Manual Feed</button>
@@ -90,6 +93,9 @@ const char index_html[] PROGMEM = R"rawliteral(
         document.getElementById('target-ph').value = data.phTarget;
         document.getElementById('target-temp').value = data.tempTarget;
         document.getElementById('stirrer-speed').value = data.stirrerSpeed;
+        document.getElementById('kp').value = data.kp;
+        document.getElementById('ki').value = data.ki;
+        document.getElementById('kd').value = data.kd;
       });
     }
 
@@ -97,7 +103,10 @@ const char index_html[] PROGMEM = R"rawliteral(
       var settings = {
         phTarget: parseFloat(document.getElementById('target-ph').value),
         tempTarget: parseFloat(document.getElementById('target-temp').value),
-        stirrerSpeed: parseInt(document.getElementById('stirrer-speed').value)
+        stirrerSpeed: parseInt(document.getElementById('stirrer-speed').value),
+        kp: parseFloat(document.getElementById('kp').value),
+        ki: parseFloat(document.getElementById('ki').value),
+        kd: parseFloat(document.getElementById('kd').value)
       };
       fetch('/set', {
         method: 'POST',
