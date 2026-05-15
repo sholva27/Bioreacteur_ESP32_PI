@@ -9,6 +9,7 @@
 #include <ArduinoOTA.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
+#include <PubSubClient.h>
 
 #include "config.h"
 #include "dashboard.html.h"
@@ -19,8 +20,13 @@ RTC_DS3231 rtc;
 OneWire oneWire(TEMP_SENSOR_PIN);
 DallasTemperature sensors(&oneWire);
 AsyncWebServer server(80);
+WiFiClient espClient;
+PubSubClient mqttClient(espClient);
 
 // Global state
+String mqttBroker = MQTT_BROKER;
+bool mqttEnabled = false;
+
 float phTarget = PH_TARGET;
 float phHysteresis = PH_HYSTERESIS;
 float tempTarget = TEMP_TARGET;
@@ -50,6 +56,9 @@ float phIntegral = 0.0, lastPhError = 0.0;
 
 // Function prototypes
 void updateSensors();
+void setupMQTT();
+void reconnectMQTT();
+void mqttCallback(char* topic, byte* payload, unsigned int length);
 void controlPH();
 void controlTemp();
 void controlFeeding();
@@ -160,10 +169,15 @@ void setup() {
 
   server.begin();
   setupOTA();
+  setupMQTT();
 }
 
 void loop() {
   ArduinoOTA.handle();
+  if (mqttEnabled) {
+    if (!mqttClient.connected()) reconnectMQTT();
+    mqttClient.loop();
+  }
   unsigned long currentMillis = millis();
 
   // Sensor Reading (Non-blocking)
@@ -190,9 +204,12 @@ void loop() {
   // Feeding logic (Non-blocking)
   controlFeeding();
 
-  // Data Logging (Non-blocking)
+  // Data Logging & MQTT Publishing (Non-blocking)
   if (currentMillis - lastLogTime >= LOG_INTERVAL_MS) {
     logData();
+    if (mqttEnabled && mqttClient.connected()) {
+       mqttClient.publish(MQTT_TOPIC_PREFIX "/telemetry", getTelemetryJSON().c_str());
+    }
     lastLogTime = currentMillis;
   }
 
@@ -359,6 +376,34 @@ void logData() {
   file.close();
 }
 
+void setupMQTT() {
+  mqttClient.setServer(mqttBroker.c_str(), MQTT_PORT);
+  mqttClient.setCallback(mqttCallback);
+}
+
+void reconnectMQTT() {
+  static unsigned long lastReconnectAttempt = 0;
+  if (millis() - lastReconnectAttempt > 5000) {
+    lastReconnectAttempt = millis();
+    if (mqttClient.connect("BiofermenterClient", MQTT_USER, MQTT_PASS)) {
+      mqttClient.subscribe(MQTT_TOPIC_PREFIX "/command");
+    }
+  }
+}
+
+void mqttCallback(char* topic, byte* payload, unsigned int length) {
+  StaticJsonDocument<200> doc;
+  deserializeJson(doc, payload, length);
+  if (doc.containsKey("command")) {
+    String cmd = doc["command"];
+    if (cmd == "feed") {
+      nutrientPumpActive = true;
+      nutrientPumpStartTime = millis();
+      digitalWrite(PUMP_NUTRIENT_PIN, HIGH);
+    }
+  }
+}
+
 void emergencyStop() {
   digitalWrite(PUMP_ACID_PIN, LOW);
   digitalWrite(PUMP_BASE_PIN, LOW);
@@ -370,9 +415,11 @@ void emergencyStop() {
 void loadSettings() {
   File file = SPIFFS.open("/settings.json", FILE_READ);
   if(!file) return;
-  StaticJsonDocument<512> doc;
+  StaticJsonDocument<1024> doc;
   deserializeJson(doc, file);
   phTarget = doc["phTarget"] | PH_TARGET;
+  mqttBroker = doc["mqttBroker"] | MQTT_BROKER;
+  mqttEnabled = doc["mqttEnabled"] | false;
   phHysteresis = doc["phHysteresis"] | PH_HYSTERESIS;
   tempTarget = doc["tempTarget"] | TEMP_TARGET;
   stirrerSpeed = doc["stirrerSpeed"] | STIRRER_SPEED_DEFAULT;
@@ -386,8 +433,10 @@ void loadSettings() {
 void saveSettings() {
   File file = SPIFFS.open("/settings.json", FILE_WRITE);
   if(!file) return;
-  StaticJsonDocument<512> doc;
+  StaticJsonDocument<1024> doc;
   doc["phTarget"] = phTarget;
+  doc["mqttBroker"] = mqttBroker;
+  doc["mqttEnabled"] = mqttEnabled;
   doc["phHysteresis"] = phHysteresis;
   doc["tempTarget"] = tempTarget;
   doc["stirrerSpeed"] = stirrerSpeed;

@@ -53,6 +53,9 @@ const char index_html[] PROGMEM = R"rawliteral(
     <label>Kp:</label> <input type="number" id="kp"><br>
     <label>Ki:</label> <input type="number" id="ki"><br>
     <label>Kd:</label> <input type="number" id="kd"><br>
+    <hr>
+    <label>Enable MQTT:</label> <input type="checkbox" id="mqtt-enabled"><br>
+    <label>MQTT Broker:</label> <input type="text" id="mqtt-broker"><br>
     <button onclick="updateSettings()">Save Settings</button>
     <button class="btn-download" onclick="window.location.href='/download_log'">Download Log</button>
     <button onclick="togglePump('nutrient')">Manual Feed</button>
@@ -96,11 +99,15 @@ const char index_html[] PROGMEM = R"rawliteral(
         document.getElementById('kp').value = data.kp;
         document.getElementById('ki').value = data.ki;
         document.getElementById('kd').value = data.kd;
+        document.getElementById('mqtt-enabled').checked = data.mqttEnabled;
+        document.getElementById('mqtt-broker').value = data.mqttBroker;
       });
     }
 
     function updateSettings() {
       var settings = {
+        mqttEnabled: document.getElementById('mqtt-enabled').checked,
+        mqttBroker: document.getElementById('mqtt-broker').value,
         phTarget: parseFloat(document.getElementById('target-ph').value),
         tempTarget: parseFloat(document.getElementById('target-temp').value),
         stirrerSpeed: parseInt(document.getElementById('stirrer-speed').value),

@@ -33,4 +33,9 @@
 #define SENSOR_READ_INTERVAL_MS 2000
 #define LOG_INTERVAL_MS 60000        // 1 minute
 
+// MQTT Settings
+#define MQTT_BROKER "Your_MQTT_Broker_IP"
+#define MQTT_PORT 1883
+#define MQTT_TOPIC_PREFIX "biofermenter/1"
+
 #endif
