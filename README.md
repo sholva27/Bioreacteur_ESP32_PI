@@ -52,12 +52,16 @@ An advanced, open-source automated fermentation system optimized for probiotic c
 - **Persistent Telemetry**: Data is logged every minute to internal SPIFFS.
 - **OTA Support**: Firmware can be updated wirelessly using the Arduino IDE or PlatformIO.
 
-### Suggested Future Improvements
-- **Metabolic Activity Detection**: Integration of CO2/O2 exhaust gas analysis to estimate real-time metabolic flux.
-- **Bacteriocin Monitoring & Harvesting**: Automated sampling and fraction collection systems for studying antimicrobial peptides.
-- **MQTT Integration**: For cloud-based data logging and multi-bioreactor management.
-- **Advanced PID**: Fine-tuning of Ki and Kd parameters for even tighter pH control.
-- **Oxygen Control**: Integration of a DO (Dissolved Oxygen) sensor and air pump control.
+### Suggested Future Improvements (Inspired by Open-Source Community)
+Drawing from projects like **Pioreactor**, **Chi.Bio**, and **BREAD**, the following upgrades are proposed to reach professional laboratory standards:
+
+1.  **Multi-Wavelength Optical Density (Chi.Bio Inspired)**: Implement dual or triple-wavelength OD sensing (e.g., 600nm for biomass and 750nm for debris compensation) using spectral sensors.
+2.  **Automated Calibration Routines (Pioreactor Inspired)**: Develop a software wizard in the web UI for multi-point pH calibration and peristaltic pump volume calibration.
+3.  **Modular Hardware "Slices" (BREAD Inspired)**: Redesign the PCB to support pluggable modules (Slices) for different sensors, allowing for easy expansion without rewiring.
+4.  **Metabolic Activity Detection (Respiration)**: Integration of CO2/O2 exhaust gas analysis to estimate real-time metabolic flux and oxygen uptake rate (OUR).
+5.  **Bacteriocin Monitoring & Harvesting**: Automated sampling and fraction collection systems using a 4th or 5th peristaltic pump for studying antimicrobial peptides.
+6.  **MQTT/SCADA Integration**: Full support for MQTT protocol to allow integration into SCADA systems for industrial-scale monitoring.
+7.  **Oxygen Control (DO)**: Active regulation of Dissolved Oxygen through variable-speed aeration or O2 injection.
 
 ## Inspirational Open-Source Projects
 
