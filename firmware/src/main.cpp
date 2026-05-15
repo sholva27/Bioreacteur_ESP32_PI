@@ -98,6 +98,8 @@ void setup() {
     sensorError = true;
   }
   sensors.begin();
+  sensors.setWaitForConversion(false); // Non-blocking temperature reads
+  sensors.requestTemperatures();       // Start first conversion
 
   // Initialize Pins
   pinMode(PUMP_ACID_PIN, OUTPUT);
@@ -252,14 +254,15 @@ void controlTemp() {
 void updateSensors() {
   unsigned long currentMillis = millis();
 
-  // Read Temperature
-  sensors.requestTemperatures();
+  // Read Temperature result from previous request
   float temp = sensors.getTempCByIndex(0);
   if (temp != DEVICE_DISCONNECTED_C) {
     currentTemp = temp;
   } else {
     sensorError = true;
   }
+  // Request temperature for next cycle
+  sensors.requestTemperatures();
 
   // Read pH
   int16_t phRaw = ads.readADC_SingleEnded(ADS_PH_CH);

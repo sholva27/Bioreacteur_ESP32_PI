@@ -37,12 +37,12 @@ An advanced, open-source automated fermentation system optimized for probiotic c
 
 1. **Hardware Assembly**: Refer to [hardware.md](hardware.md) for wiring diagrams and BOM.
 2. **Growth Modeling**: See [research.md](research.md) for details on kinetic parameters.
-2. **Firmware Upload**:
+3. **Firmware Upload**:
    - Install the ESP32 board support in Arduino IDE.
    - Install required libraries via Library Manager.
    - Rename `firmware/include/secrets.h.example` to `secrets.h` and configure your WiFi credentials.
    - Upload to ESP32-S3.
-3. **Web Interface**: Once connected to WiFi, navigate to the ESP32's IP address in your browser.
+4. **Web Interface**: Once connected to WiFi, navigate to the ESP32's IP address in your browser.
 
 ## Optimizations and Future Work
 

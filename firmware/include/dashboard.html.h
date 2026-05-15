@@ -113,27 +113,6 @@ const char index_html[] PROGMEM = R"rawliteral(
       });
     }
 
-    function updateSettings() {
-      var settings = {
-        mqttEnabled: document.getElementById('mqtt-enabled').checked,
-        mqttBroker: document.getElementById('mqtt-broker').value,
-        phTarget: parseFloat(document.getElementById('target-ph').value),
-        tempTarget: parseFloat(document.getElementById('target-temp').value),
-        stirrerSpeed: parseInt(document.getElementById('stirrer-speed').value),
-        kp: parseFloat(document.getElementById('kp').value),
-        ki: parseFloat(document.getElementById('ki').value),
-        kd: parseFloat(document.getElementById('kd').value)
-      };
-      fetch('/set', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify(settings)
-      });
-    }
-
-    var lastPh7V = 0;
-    var lastPh4V = 0;
-
     var lastPh7V = 0;
     var lastPh4V = 0;
 
@@ -142,13 +121,11 @@ const char index_html[] PROGMEM = R"rawliteral(
           if (value == 7.0) {
             lastPh7V = data.ph_v;
             alert("pH 7.0 set to " + lastPh7V + "V. Now place in pH 4.0 and calibrate.");
-            // Send new offset: 7.0 = 7.0 + (V*slope) + offset. If slope=1, offset = -V
             updateSettings({phOffset: -lastPh7V});
           } else if (value == 4.0) {
             lastPh4V = data.ph_v;
-            // Calculate slope: (7-4) / (V7 - V4)
             var newSlope = 3.0 / (lastPh7V - lastPh4V);
-            var newOffset = 0 - (lastPh7V * newSlope); // pH 7.0 is 0V center in model
+            var newOffset = 0 - (lastPh7V * newSlope);
             updateSettings({phSlope: newSlope, phOffset: newOffset});
             alert("pH Calibrated! Slope: " + newSlope.toFixed(2));
           }
@@ -164,7 +141,7 @@ const char index_html[] PROGMEM = R"rawliteral(
 
     function updateSettings(extra = {}) {
       fetch('/settings').then(r => r.json()).then(data => {
-        var settings = data; // Start with current settings to preserve calibration values
+        var settings = data;
         settings.mqttEnabled = document.getElementById('mqtt-enabled').checked;
         settings.mqttBroker = document.getElementById('mqtt-broker').value;
         settings.phTarget = parseFloat(document.getElementById('target-ph').value);
@@ -179,7 +156,7 @@ const char index_html[] PROGMEM = R"rawliteral(
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify(settings)
-        }).then(() => alert("Settings Updated Successfully"));
+        }).then(() => { if (!Object.keys(extra).length) alert("Settings Updated Successfully"); });
       });
     }
 

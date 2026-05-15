@@ -124,3 +124,19 @@ While the **OPT101** (Photodiode + Integrated Amp) is an excellent choice for it
 1. **Isolation**: It is highly recommended to use an I2C isolator (like ADUM1250) for the pH probe to avoid ground loops if the system is connected to mains-powered equipment.
 2. **OD Path**: The Laser/LED and Photodiode should be mounted opposite each other across a 10mm clear flow cell or tube.
 3. **Power**: Ensure the 12V power supply can handle the peak current of 3 pumps simultaneously (~2-3A).
+
+## Local Procurement (Algeria)
+
+For users in Algeria, most components can be sourced from:
+
+### [Dzduino](https://www.dzduino.com)
+- **ESP32-S3**: Look for "ESP32-S3 Touch LCD" or "ESP32-S3-CAM".
+- **ADS1115**: Search for "Module ADC 16 Bits".
+- **DS18B20**: Search for "Capteur de température étanche".
+- **L298N**: Search for "Module de commande moteur".
+- **MK2A**: Search for "Plaque chauffante".
+
+### [SESDZ](https://www.sesdz.com)
+- **Power Control**: Look for "Sonoff" or "Tense" modules for robust heater switching.
+- **Enclosures**: Search for "Boîtier de jonction" for waterproof housing.
+- **Connectors**: Search for "Connecteur d'alimentation DC".

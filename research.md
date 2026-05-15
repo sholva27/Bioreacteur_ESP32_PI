@@ -37,19 +37,19 @@ The automated nutrient pump can be programmed for specific feeding profiles:
 - **Exponential Feed**: Matches the growth rate (µ) to maintain a constant substrate concentration.
 - **Chemostat**: By adding an overflow/effluent pump, the system can maintain a continuous culture at a specific steady state.
 
-### 2. Metabolic Heat Correlation
+### 3. Metabolic Heat Correlation
 Since the system uses a PWM-controlled heater (MK2Y), the **duty cycle** required to maintain a constant temperature can be correlated with the metabolic heat produced by the culture. This provides an indirect measurement of metabolic activity without additional sensors.
 
-### 3. Co-culture Modeling
+### 4. Co-culture Modeling
 Study the interaction between different probiotic strains by monitoring the composite OD curve and fitting it to multi-species competition models (e.g., Lotka-Volterra).
 
-### 4. Metabolic Optimization
+### 5. Metabolic Optimization
 Correlate µ with different feeding strategies and pH levels to find the "sweet spot" for biomass production.
 
-### 5. Lag Phase Analysis
+### 6. Lag Phase Analysis
 Study the effect of inoculum size, age, and media composition on the lag time (`lambda`).
 
-### 6. Harvest Optimization
+### 7. Harvest Optimization
 Use the real-time mu value to trigger harvesting exactly at the transition to the stationary phase for peak bacteriocin yield.
 
 ## Pedagogical Use
