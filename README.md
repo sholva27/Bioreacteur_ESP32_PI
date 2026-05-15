@@ -66,6 +66,7 @@ For further inspiration and alternative architectures, check out these excellent
 - **[Pioreactor](https://github.com/Pioreactor/pioreactor)**: A highly polished, Raspberry Pi-based bioreactor platform with a rich Python API and extensive plugin ecosystem.
 - **[BREAD (Broadly Reconfigurable and Expandable Automation Device)](https://github.com/FEASTorg/BREADS)**: A modular, ESP32-based hardware framework designed for low-cost laboratory automation and SCADA-like functionality.
 - **[EvoluStat](https://github.com/onid-no-more/EvoluStat)**: An open-source automated continuous culture system (stat) for microbial evolution experiments.
+- **[Chi.Bio](https://github.com/harrison-steel/Chi.Bio)**: An open-lab-hardware platform for biological characterization and manipulation, featuring advanced optical and thermal control.
 
 ## License
 
