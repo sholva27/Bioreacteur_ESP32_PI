@@ -31,6 +31,9 @@
 | EC11 I2C Encoder | Rotary Encoder for local menu navigation | 1 |
 | 20A MOS Driver | High-current MOSFET for Heater control | 1 |
 | XGZP6847A | Gas Pressure Sensor (0-40kPa) | 1 |
+| UV-A LED (340nm) | NADH Excitation Light Source | 1 |
+| AS7341 Spectral Sensor | 11-Channel High Precision Visible Light Sensor | 1 |
+| 460nm Bandpass Filter | Optical Filter for NADH Emission | 1 |
 
 ## Pinout Mapping (ESP32-S3)
 
@@ -47,6 +50,7 @@
 | Stirrer (PWM) | GPIO 16 | - |
 | Touch Button (TTP223B) | GPIO 17 | - |
 | Status LED | GPIO 21 | - |
+| Fluorescence LED | GPIO 18 | - |
 
 ## Light Source Options for OD600
 
@@ -212,6 +216,11 @@ Integrating these components can transition the biofermenter into an industrial-
 ### 8. XGZP6847A Gas Pressure Sensor
 - **Use Case**: Monitoring fermentation gas production in the vessel headspace.
 - **Benefit**: Many probiotic strains produce gases (primarily $CO_2$) during growth. Measuring pressure changes (0-40kPa range) provides a sensitive, non-invasive proxy for metabolic rate, complementary to pH and OD sensing.
+
+### 9. NADH Fluorescence Setup (Metabolic Vigor)
+- **Excitation**: 340nm UV LED (driven via GPIO 18).
+- **Emission Sensing**: **AS7341** spectral sensor.
+- **Benefit**: Monitoring NADH fluorescence (340nm excitation / 460nm emission) provides a direct look into the intracellular redox state. This allows the system to distinguish between "alive but dormant" and "metabolically active" bacteria, a key metric for optimizing probiotic yield.
 
 ## Local Procurement (Algeria)
 

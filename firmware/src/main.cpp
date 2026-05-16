@@ -43,7 +43,8 @@ float currentOD = 0.0;
 float currentTemp = 0.0;
 float currentPH_V = 0.0;
 float currentOD_V = 0.0;
-float growthRate = 0.0; // Specific growth rate (mu)
+float currentFluo = 0.0; // NADH Fluorescence intensity
+float growthRate = 0.0;  // Specific growth rate (mu)
 
 float lastOD = 0.0;
 unsigned long lastODTime = 0;
@@ -52,6 +53,7 @@ bool sensorError = false;
 unsigned long lastSensorRead = 0;
 unsigned long lastFeedingTime = 0;
 unsigned long lastLogTime = 0;
+unsigned long lastFluoRead = 0;
 
 // Pump states (for non-blocking duration)
 bool nutrientPumpActive = false;
@@ -70,6 +72,7 @@ void controlPH();
 void controlTemp();
 void controlFeeding();
 void logData();
+void updateFluo();
 String getTelemetryJSON();
 void emergencyStop();
 void setupOTA();
@@ -113,6 +116,7 @@ void setup() {
   pinMode(HEATER_PIN, OUTPUT);
   pinMode(STIRRER_PIN, OUTPUT);
   pinMode(TOUCH_BUTTON_PIN, INPUT);
+  pinMode(FLUO_LED_PIN, OUTPUT);
   pinMode(STATUS_LED, OUTPUT);
   emergencyStop(); // Ensure all pumps off at start
 
@@ -227,6 +231,12 @@ void loop() {
   // Feeding logic (Non-blocking)
   controlFeeding();
 
+  // Fluorescence Reading (Non-blocking)
+  if (currentMillis - lastFluoRead >= FLUO_READ_INTERVAL_MS) {
+    updateFluo();
+    lastFluoRead = currentMillis;
+  }
+
   // Data Logging & MQTT Publishing (Non-blocking)
   if (currentMillis - lastLogTime >= LOG_INTERVAL_MS) {
     logData();
@@ -256,6 +266,23 @@ void controlTemp() {
     digitalWrite(HEATER_PIN, HIGH);
   } else {
     digitalWrite(HEATER_PIN, LOW);
+  }
+}
+
+void updateFluo() {
+  // Read NADH Fluorescence (340nm exc / 460nm em)
+  // For this implementation, we use the AS7341 spectral sensor logic
+  // (Assuming AS7341 library is integrated or using ADS channel if analog)
+
+  digitalWrite(FLUO_LED_PIN, HIGH);
+  delayMicroseconds(500);
+
+  // Example: Using ADS Channel 2 if using an analog high-sensitivity TIA circuit
+  int16_t fluoRaw = ads.readADC_SingleEnded(2);
+  digitalWrite(FLUO_LED_PIN, LOW);
+
+  if (fluoRaw != -1) {
+    currentFluo = (float)fluoRaw * 0.0001875;
   }
 }
 
@@ -498,6 +525,7 @@ String getTelemetryJSON() {
   doc["od_v"] = currentOD_V;
   doc["temp"] = currentTemp;
   doc["mu"] = growthRate;
+  doc["fluo"] = currentFluo;
   doc["timestamp"] = now.timestamp();
   doc["error"] = sensorError;
   String output;
