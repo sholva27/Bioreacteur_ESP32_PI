@@ -1,0 +1,3 @@
+## 2025-05-15 - [Embedded Dashboard UX & Async Resilience]
+**Learning:** In resource-constrained embedded web dashboards (ESP32), using blocking `alert()` calls for success/error feedback disrupts the user flow. Furthermore, interactive button states (disabling/loading text) during asynchronous `fetch` requests MUST include `.catch()` blocks; otherwise, a single network glitch can permanently "freeze" a UI element in its loading state.
+**Action:** Always prefer inline status updates over `alert()`. Implement robust error handling in all async UI interactions to ensure buttons return to their actionable state even on failure.
