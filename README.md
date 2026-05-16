@@ -50,6 +50,7 @@ An advanced, open-source automated fermentation system optimized for probiotic c
 - **Time-Proportional Titration**: Uses a 10-second duty cycle for pumps where the 'ON' time is proportional to the deviation from the pH target.
 - **Async Processing**: All networking and control logic is non-blocking.
 - **Persistent Telemetry**: Data is logged every minute to internal SPIFFS.
+- **Real-time Excel Logging**: Support for **PLX-DAQ v2** allowing live data streaming directly into Microsoft Excel for instant analysis and graphing.
 - **OTA Support**: Firmware can be updated wirelessly using the Arduino IDE or PlatformIO.
 
 ### Suggested Future Improvements (Inspired by Open-Source Community)
@@ -62,6 +63,13 @@ Drawing from projects like **Pioreactor**, **Chi.Bio**, and **BREAD**, the follo
 5.  **Bacteriocin Monitoring & Harvesting**: Automated sampling and fraction collection systems using a 4th or 5th peristaltic pump for studying antimicrobial peptides.
 6.  **MQTT/SCADA Integration**: Full support for MQTT protocol to allow integration into SCADA systems for industrial-scale monitoring.
 7.  **Oxygen Control (DO)**: Active regulation of Dissolved Oxygen through variable-speed aeration or O2 injection.
+
+## Real-time Excel Logging (PLX-DAQ)
+
+For immediate data visualization during an experiment, the system supports **PLX-DAQ**.
+1.  Download and install the [PLX-DAQ v2 Excel Macro](https://www.parallax.com/package/plx-daq/).
+2.  Open the Excel spreadsheet and connect to the ESP32's Serial COM Port at **115200 baud**.
+3.  The system will automatically clear the sheet and begin populating columns with **Time, pH, OD, Temp, and Growth Rate** every minute.
 
 ## Inspirational Open-Source Projects
 
