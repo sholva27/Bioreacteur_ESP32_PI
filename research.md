@@ -26,30 +26,36 @@ This value represents the instantaneous rate of biomass increase. During the **e
 
 ## Research Applications
 
-### 1. Optical Redox Monitoring
+### 1. Turbidity vs. OD600
+For high-resolution growth tracking, understanding the difference between Transmission and Scattering is vital:
+- **OD600 (Transmission)**: Measures the amount of light that *fails* to pass through the culture. It is highly accurate for low to medium densities but "saturates" (flattens out) when the culture becomes too thick for light to penetrate.
+- **Turbidity (Scattering/Nephelometry)**: Measures the light that is *scattered* at an angle (usually 90°). This method is often superior for high-density probiotic cultures as it remains linear over a wider range of biomass concentrations.
+- **Combined Approach**: Using the Laser/Photodiode path for early-stage growth (lag and early-log) and a dedicated Turbidity sensor for late-log and stationary phases provides a complete picture of the culture's lifecycle.
+
+### 2. Optical Redox Monitoring
 By adding redox-active dyes like **Resazurin** or **Methylene Blue** to the media, the metabolic activity (respiration) of the culture can be tracked optically.
 - **Resazurin Assay**: Using an RGB sensor (like TCS34725) to monitor the color change from blue (inactive) to pink (metabolically active). This provides a more sensitive measurement of health than OD alone.
 - **Spectral Fingerprinting**: Using a multi-channel spectral sensor (AS7262) to monitor subtle changes in the light absorption at different wavelengths (450nm - 650nm), which can be correlated with nutrient depletion or metabolic byproduct accumulation.
 
-### 2. Fed-batch and Chemostat Strategies
+### 3. Fed-batch and Chemostat Strategies
 The automated nutrient pump can be programmed for specific feeding profiles:
 - **Constant Feed**: Maintains a steady supply of substrate.
 - **Exponential Feed**: Matches the growth rate (µ) to maintain a constant substrate concentration.
 - **Chemostat**: By adding an overflow/effluent pump, the system can maintain a continuous culture at a specific steady state.
 
-### 3. Metabolic Heat Correlation
+### 4. Metabolic Heat Correlation
 Since the system uses a PWM-controlled heater (MK2Y), the **duty cycle** required to maintain a constant temperature can be correlated with the metabolic heat produced by the culture. This provides an indirect measurement of metabolic activity without additional sensors.
 
-### 4. Co-culture Modeling
+### 5. Co-culture Modeling
 Study the interaction between different probiotic strains by monitoring the composite OD curve and fitting it to multi-species competition models (e.g., Lotka-Volterra).
 
-### 5. Metabolic Optimization
+### 6. Metabolic Optimization
 Correlate µ with different feeding strategies and pH levels to find the "sweet spot" for biomass production.
 
-### 6. Lag Phase Analysis
+### 7. Lag Phase Analysis
 Study the effect of inoculum size, age, and media composition on the lag time (`lambda`).
 
-### 7. Harvest Optimization
+### 8. Harvest Optimization
 Use the real-time mu value to trigger harvesting exactly at the transition to the stationary phase for peak bacteriocin yield.
 
 ## Pedagogical Use
