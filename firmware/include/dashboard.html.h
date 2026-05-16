@@ -48,6 +48,7 @@ const char index_html[] PROGMEM = R"rawliteral(
   <div class="card">
     <h2>NADH (Metabolism)</h2>
     <p><span class="value" id="fluo">--</span> <span class="unit">RFU</span></p>
+    <p><small>Riboflavin Noise: <span id="ribo">--</span></small></p>
   </div>
 
   <div class="card">
@@ -177,6 +178,7 @@ const char index_html[] PROGMEM = R"rawliteral(
         document.getElementById("temp").innerHTML = data.temp.toFixed(1);
         document.getElementById("mu").innerHTML = data.mu.toFixed(2);
         document.getElementById("fluo").innerHTML = data.fluo.toFixed(4);
+        document.getElementById("ribo").innerHTML = data.ribo.toFixed(4);
         document.getElementById("uv-v").innerHTML = data.uv_v.toFixed(4);
         document.getElementById("ph-v").innerHTML = data.ph_v.toFixed(4);
         document.getElementById("od-v").innerHTML = data.od_v.toFixed(4);

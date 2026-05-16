@@ -35,6 +35,9 @@
 | UV-A LED (340nm) | NADH Excitation Light Source | 1 |
 | AS7341 Spectral Sensor | 11-Channel High Precision Visible Light Sensor | 1 |
 | 460nm Bandpass Filter | Optical Filter for NADH Emission | 1 |
+| IRLZ44N MOSFET | Logic-level MOSFET for UV LED Driver | 1 |
+| 200Ω 1W Resistor | Current limiting for 340nm LED @ 12V | 1 |
+| Quartz Window | UV-transparent interface for vessel | 1 |
 
 ## Pinout Mapping (ESP32-S3)
 
@@ -219,9 +222,14 @@ Integrating these components can transition the biofermenter into an industrial-
 - **Benefit**: Many probiotic strains produce gases (primarily $CO_2$) during growth. Measuring pressure changes (0-40kPa range) provides a sensitive, non-invasive proxy for metabolic rate, complementary to pH and OD sensing.
 
 ### 9. NADH Fluorescence Setup (Metabolic Vigor)
-- **Excitation**: 340nm UV LED (driven via GPIO 18).
+- **Excitation**: 340nm UV LED.
+    - **Driver**: Must use an external power source (12V) and a logic-level MOSFET (e.g., **IRLZ44N**) via GPIO 18.
+    - **Current Limiting**: Use a **200Ω 1W** resistor for a 12V supply to achieve ~40mA ($R = (V_{alim} - V_f) / I$).
 - **Emission Sensing**: **AS7341** spectral sensor.
-- **Benefit**: Monitoring NADH fluorescence (340nm excitation / 460nm emission) provides a direct look into the intracellular redox state. This allows the system to distinguish between "alive but dormant" and "metabolically active" bacteria, a key metric for optimizing probiotic yield.
+- **Optical Geometry**:
+    - **Front-Face Reflection**: Place the LED and sensor side-by-side (front-face) rather than at 90°. This is critical for turbid Lactic Acid Bacteria (LAB) cultures where light cannot penetrate deeply.
+    - **Quartz Window**: Use quartz optics/windows; standard glass or plastic often blocks UV light at 340nm.
+- **Benefit**: Monitoring NADH fluorescence (340nm excitation / 460nm emission) provides a direct look into the intracellular redox state. This allows the system to distinguish between "alive but dormant" and "metabolically active" bacteria.
 
 ### 10. UV Sensor Brick (200-370nm)
 - **Use Case**: **Excitation Monitoring** and **Sterilization Safety**.
