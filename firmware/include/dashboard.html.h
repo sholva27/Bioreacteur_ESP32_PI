@@ -50,18 +50,18 @@ const char index_html[] PROGMEM = R"rawliteral(
 
   <div class="card">
     <h2>Configuration</h2>
-    <label>pH Target:</label> <input type="number" id="target-ph" step="0.1"><br>
-    <label>Temp Target:</label> <input type="number" id="target-temp" step="0.5"><br>
-    <label>Stirrer Speed (0-255):</label> <input type="number" id="stirrer-speed"><br>
-    <label>Kp:</label> <input type="number" id="kp"><br>
-    <label>Ki:</label> <input type="number" id="ki"><br>
-    <label>Kd:</label> <input type="number" id="kd"><br>
+    <label for="target-ph">pH Target:</label> <input type="number" id="target-ph" step="0.1"><br>
+    <label for="target-temp">Temp Target:</label> <input type="number" id="target-temp" step="0.5"><br>
+    <label for="stirrer-speed">Stirrer Speed (0-255):</label> <input type="number" id="stirrer-speed"><br>
+    <label for="kp">Kp:</label> <input type="number" id="kp"><br>
+    <label for="ki">Ki:</label> <input type="number" id="ki"><br>
+    <label for="kd">Kd:</label> <input type="number" id="kd"><br>
     <hr>
-    <label>Enable MQTT:</label> <input type="checkbox" id="mqtt-enabled"><br>
-    <label>MQTT Broker:</label> <input type="text" id="mqtt-broker"><br>
-    <button onclick="updateSettings()">Save Settings</button>
+    <label for="mqtt-enabled">Enable MQTT:</label> <input type="checkbox" id="mqtt-enabled"><br>
+    <label for="mqtt-broker">MQTT Broker:</label> <input type="text" id="mqtt-broker"><br>
+    <button id="btn-save" onclick="updateSettings()">Save Settings</button>
     <button class="btn-download" onclick="window.location.href='/download_log'">Download Log</button>
-    <button onclick="togglePump('nutrient')">Manual Feed</button>
+    <button id="btn-feed" onclick="togglePump('nutrient')" aria-label="Trigger manual nutrient feeding">Manual Feed</button>
   </div>
 
   <div class="card">
@@ -143,6 +143,13 @@ const char index_html[] PROGMEM = R"rawliteral(
     }
 
     function updateSettings(extra = {}) {
+      const btn = document.getElementById('btn-save');
+      const originalText = btn.innerText;
+      if (!Object.keys(extra).length) {
+        btn.innerText = "Saving...";
+        btn.disabled = true;
+      }
+
       fetch('/settings').then(r => r.json()).then(data => {
         var settings = data;
         settings.mqttEnabled = document.getElementById('mqtt-enabled').checked;
@@ -159,7 +166,19 @@ const char index_html[] PROGMEM = R"rawliteral(
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify(settings)
-        }).then(() => { if (!Object.keys(extra).length) alert("Settings Updated Successfully"); });
+        }).then(() => {
+          if (!Object.keys(extra).length) {
+            btn.innerText = "Saved!";
+            setTimeout(() => {
+              btn.disabled = false;
+              btn.innerText = originalText;
+            }, 2000);
+          }
+        }).catch(err => {
+          console.error("Save failed", err);
+          btn.disabled = false;
+          btn.innerText = originalText;
+        });
       });
     }
 
@@ -189,7 +208,26 @@ const char index_html[] PROGMEM = R"rawliteral(
       });
     }, 5000);
 
-    function togglePump(pump) { fetch("/pump?type=" + pump); }
+    function togglePump(pump) {
+      if (pump === 'nutrient') {
+        const btn = document.getElementById('btn-feed');
+        const originalText = btn.innerText;
+        btn.disabled = true;
+        btn.innerText = "Feeding...";
+        fetch("/pump?type=" + pump).then(() => {
+          setTimeout(() => {
+            btn.disabled = false;
+            btn.innerText = originalText;
+          }, 5000);
+        }).catch(err => {
+          console.error("Pump toggle failed", err);
+          btn.disabled = false;
+          btn.innerText = originalText;
+        });
+      } else {
+        fetch("/pump?type=" + pump);
+      }
+    }
     window.onload = loadSettings;
   </script>
 </body>
