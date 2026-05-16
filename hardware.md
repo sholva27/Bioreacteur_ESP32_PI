@@ -28,6 +28,9 @@
 | ILI9488 TFT | 4" SPI Touch Display (Optional - Local UI) | 1 |
 | Turbidity Sensor | Water Turbidity Module (Optional - OD complement) | 1 |
 | ADS1118 | 16-bit ADC with Temp Sensor (Alternative ADC) | 1 |
+| EC11 I2C Encoder | Rotary Encoder for local menu navigation | 1 |
+| 20A MOS Driver | High-current MOSFET for Heater control | 1 |
+| XGZP6847A | Gas Pressure Sensor (0-40kPa) | 1 |
 
 ## Pinout Mapping (ESP32-S3)
 
@@ -196,6 +199,18 @@ Integrating these components can transition the biofermenter into an industrial-
 ### 5. ILI9488 4" TFT (Local HMI)
 - **Use Case**: Standalone monitoring without a smartphone/PC.
 - **Benefit**: The ESP32-S3 is powerful enough to drive this 480x320 display. It allows for local graphing of pH/OD and manual pump control via the touchscreen, essential for lab environments where Wi-Fi might be restricted or unreliable.
+
+### 6. EC11 I2C Rotary Encoder
+- **Use Case**: Tactile navigation of the local TFT menu.
+- **Benefit**: While touchscreens are convenient, a rotary encoder is often more reliable in wet lab environments or when wearing gloves. Using the I2C version saves GPIO pins on the ESP32-S3.
+
+### 7. 20A MOS Driver Module
+- **Use Case**: Driving the MK2Y 12V 10A heater.
+- **Benefit**: These modules are designed for 3D printer heatbeds. A **20A rated MOSFET** (like those based on the D4184) ensures very low Rds(on), meaning the module stays cool while delivering the ~120W required for the heater.
+
+### 8. XGZP6847A Gas Pressure Sensor
+- **Use Case**: Monitoring fermentation gas production in the vessel headspace.
+- **Benefit**: Many probiotic strains produce gases (primarily $CO_2$) during growth. Measuring pressure changes (0-40kPa range) provides a sensitive, non-invasive proxy for metabolic rate, complementary to pH and OD sensing.
 
 ## Local Procurement (Algeria)
 
