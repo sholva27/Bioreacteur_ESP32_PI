@@ -79,6 +79,10 @@ void saveSettings();
 void setup() {
   Serial.begin(115200);
 
+  // PLX-DAQ Excel Initialization
+  Serial.println("CLEARDATA"); // Clear existing data in Excel
+  Serial.println("LABEL,Time,pH,OD,Temp,GrowthRate"); // Set column headers
+
   // Initialize Filesystem
   if(!SPIFFS.begin(true)){
     Serial.println("An Error has occurred while mounting SPIFFS");
@@ -374,19 +378,32 @@ void controlFeeding() {
 
 void logData() {
   if (sensorError) return;
+
+  // 1. Log to SPIFFS (Internal Storage)
   File file = SPIFFS.open("/log.csv", FILE_APPEND);
-  if(!file) return;
-  DateTime now = rtc.now();
-  file.print(now.timestamp());
-  file.print(",");
-  file.print(currentPH);
-  file.print(",");
-  file.print(currentOD);
-  file.print(",");
-  file.print(currentTemp);
-  file.print(",");
-  file.println(growthRate);
-  file.close();
+  if(file) {
+    DateTime now = rtc.now();
+    file.print(now.timestamp());
+    file.print(",");
+    file.print(currentPH);
+    file.print(",");
+    file.print(currentOD);
+    file.print(",");
+    file.print(currentTemp);
+    file.print(",");
+    file.println(growthRate);
+    file.close();
+  }
+
+  // 2. Log to PLX-DAQ (Real-time Excel)
+  Serial.print("DATA,TIME,");
+  Serial.print(currentPH);
+  Serial.print(",");
+  Serial.print(currentOD);
+  Serial.print(",");
+  Serial.print(currentTemp);
+  Serial.print(",");
+  Serial.println(growthRate);
 }
 
 void setupMQTT() {
