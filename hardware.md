@@ -23,6 +23,11 @@
 | 1N4007 Diode | Flyback protection for pumps | 4 |
 | Thermal Fuse | 70°C Thermal Cutoff for safety | 1 |
 | LM358 Op-Amp | Dual Op-Amp (Optional for DIY sensors) | 1 |
+| RC522 RFID | Mifare Card Reader (Optional - Traceability) | 1 |
+| AT24C256 | External I2C EEPROM (Optional - Settings Backup) | 1 |
+| ILI9488 TFT | 4" SPI Touch Display (Optional - Local UI) | 1 |
+| Turbidity Sensor | Water Turbidity Module (Optional - OD complement) | 1 |
+| ADS1118 | 16-bit ADC with Temp Sensor (Alternative ADC) | 1 |
 
 ## Pinout Mapping (ESP32-S3)
 
@@ -167,6 +172,30 @@ Peristaltic pumps and magnetic stirrers are inductive loads. When turned off, th
 ### 4. Thermal and Environmental Safety
 - **Thermal Fuse**: For absolute safety, mount a **70°C Thermal Cutoff (TCO)** fuse in series with the heater power line, physically attached to the MK2Y heatbed. If software control fails, the TCO will permanently break the circuit.
 - **Grounding**: If using a metal enclosure, ensure the PSU ground (V-) and the chassis are properly earthed (PE) to prevent static buildup and EMI.
+
+## Advanced & Optional Modules
+
+Integrating these components can transition the biofermenter into an industrial-grade or highly autonomous research tool.
+
+### 1. RFID RC522 (Batch Traceability)
+- **Use Case**: Attach RFID tags to fermentation vessels.
+- **Benefit**: Scanning a vessel can automatically load its specific calibration curve (e.g., if different vessels have slightly different optical paths) and associate log files with a unique Batch ID.
+
+### 2. AT24C256 EEPROM (Robust Storage)
+- **Use Case**: Redundant storage for PID constants and calibration data.
+- **Benefit**: While the ESP32 has internal Flash, an external EEPROM allows for significantly more write cycles and provides a physical "backup" that can be moved to a different controller in case of ESP32 failure.
+
+### 3. Turbidity Sensor (Complementary OD)
+- **Use Case**: Measuring very high density or large-particle cultures.
+- **Benefit**: Unlike the OD600 laser path (transmission), many turbidity sensors use light scattering (Nephelometry). This is less prone to saturation at high biomass levels and can detect suspended solids that might interfere with pure optical density.
+
+### 4. ADS1118 (High-Precision + ATC)
+- **Use Case**: Precision pH monitoring with Automatic Temperature Compensation.
+- **Benefit**: The **ADS1118** includes an integrated temperature sensor. Since pH electrode slope varies with temperature (Nernst equation), the ADS1118 can use its internal temperature read to correct the pH value in real-time at the hardware interface level.
+
+### 5. ILI9488 4" TFT (Local HMI)
+- **Use Case**: Standalone monitoring without a smartphone/PC.
+- **Benefit**: The ESP32-S3 is powerful enough to drive this 480x320 display. It allows for local graphing of pH/OD and manual pump control via the touchscreen, essential for lab environments where Wi-Fi might be restricted or unreliable.
 
 ## Local Procurement (Algeria)
 
