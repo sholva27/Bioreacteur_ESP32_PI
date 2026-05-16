@@ -15,6 +15,7 @@
 #define HEATER_PIN 15
 #define STIRRER_PIN 16
 #define TOUCH_BUTTON_PIN 17
+#define FLUO_LED_PIN 18
 
 #define STATUS_LED 21
 
@@ -32,6 +33,7 @@
 #define OD_CALIBRATION_FACTOR 1.0
 #define SENSOR_READ_INTERVAL_MS 2000
 #define LOG_INTERVAL_MS 60000        // 1 minute
+#define FLUO_READ_INTERVAL_MS 5000   // 5 seconds
 
 // MQTT Settings
 #define MQTT_BROKER "Your_MQTT_Broker_IP"
