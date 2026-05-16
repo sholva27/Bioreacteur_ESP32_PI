@@ -15,7 +15,7 @@
 | 650nm Laser / 600nm LED | Light Source for OD | 1 |
 | L298N / MOSFET Module | Peristaltic Pump Driver | 3 |
 | Peristaltic Pump | 12V 0-100mL/min | 3 |
-| Buck Converter | 12V to 5V (for sensors) | 1 |
+| 5V 1A Buck Regulator | DC5.5-32V Switching Regulator for logic/sensors | 1 |
 | LDO Regulator | 5V to 3.3V (for ESP32) | 1 |
 | 12V 20A PSU | Main Power Supply (e.g. Mean Well) | 1 |
 | Fuse Holder | 12V Blade type | 2 |
@@ -158,7 +158,8 @@ While the **OPT101** (Photodiode + Integrated Amp) is an excellent choice for it
 ### 1. Power Supply (PSU) Selection
 The system requires a stable **12V DC** source. Given that the MK2Y heatbed draws ~10A and pumps/stirrer draw another 2-3A, a **20A (240W)** power supply is highly recommended.
 - **Recommended Model**: **Mean Well LRS-250-12** or similar industrial-grade enclosed switching PSU.
-- **Noise Mitigation**: High-precision sensors (pH and OD) are sensitive to ripple. Ensure the buck converter for the 5V rail has adequate output capacitance (e.g., 470uF Low-ESR).
+- **Logic Power**: Use a high-efficiency **5V 1A Switching Regulator (DC 5.5-32V input)** to step down the 12V supply for sensors and the ESP32. This is significantly better than linear regulators (7805) which would waste energy and generate heat during the long fermentation cycles.
+- **Noise Mitigation**: High-precision sensors (pH and OD) are sensitive to ripple. Ensure the switching regulator for the 5V rail has adequate output capacitance (e.g., 470uF Low-ESR) to stabilize the readings.
 
 ### 2. Electrical Protection
 Protecting the sensitive ESP32-S3 and high-current actuators is critical for long-term fermentation (which can run for days).
