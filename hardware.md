@@ -31,6 +31,7 @@
 | EC11 I2C Encoder | Rotary Encoder for local menu navigation | 1 |
 | 20A MOS Driver | High-current MOSFET for Heater control | 1 |
 | XGZP6847A | Gas Pressure Sensor (0-40kPa) | 1 |
+| UV Sensor Brick | Ultraviolet Intensity Sensor (200-370nm) | 1 |
 | UV-A LED (340nm) | NADH Excitation Light Source | 1 |
 | AS7341 Spectral Sensor | 11-Channel High Precision Visible Light Sensor | 1 |
 | 460nm Bandpass Filter | Optical Filter for NADH Emission | 1 |
@@ -221,6 +222,12 @@ Integrating these components can transition the biofermenter into an industrial-
 - **Excitation**: 340nm UV LED (driven via GPIO 18).
 - **Emission Sensing**: **AS7341** spectral sensor.
 - **Benefit**: Monitoring NADH fluorescence (340nm excitation / 460nm emission) provides a direct look into the intracellular redox state. This allows the system to distinguish between "alive but dormant" and "metabolically active" bacteria, a key metric for optimizing probiotic yield.
+
+### 10. UV Sensor Brick (200-370nm)
+- **Use Case**: **Excitation Monitoring** and **Sterilization Safety**.
+- **Utility**:
+    - **NADH Verification**: Measures the actual intensity of the UV-A excitation light to normalize fluorescence readings (correcting for LED aging or power fluctuations).
+    - **Sterilization**: If a UV-C lamp is used for vessel sterilization before inoculation, this sensor verifies that the lamp is functional and provides the correct dosage (within its 200nm-370nm response range).
 
 ## Local Procurement (Algeria)
 
