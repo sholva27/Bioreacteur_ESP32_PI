@@ -51,6 +51,11 @@ const char index_html[] PROGMEM = R"rawliteral(
   </div>
 
   <div class="card">
+    <h2>UV Monitoring</h2>
+    <p><span class="value" id="uv-v">--</span> <span class="unit">V</span></p>
+  </div>
+
+  <div class="card">
     <h2>Configuration</h2>
     <label>pH Target:</label> <input type="number" id="target-ph" step="0.1"><br>
     <label>Temp Target:</label> <input type="number" id="target-temp" step="0.5"><br>
@@ -172,6 +177,7 @@ const char index_html[] PROGMEM = R"rawliteral(
         document.getElementById("temp").innerHTML = data.temp.toFixed(1);
         document.getElementById("mu").innerHTML = data.mu.toFixed(2);
         document.getElementById("fluo").innerHTML = data.fluo.toFixed(4);
+        document.getElementById("uv-v").innerHTML = data.uv_v.toFixed(4);
         document.getElementById("ph-v").innerHTML = data.ph_v.toFixed(4);
         document.getElementById("od-v").innerHTML = data.od_v.toFixed(4);
 

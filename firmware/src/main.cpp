@@ -43,6 +43,7 @@ float currentOD = 0.0;
 float currentTemp = 0.0;
 float currentPH_V = 0.0;
 float currentOD_V = 0.0;
+float currentUV_V = 0.0;  // UV Intensity voltage
 float currentFluo = 0.0; // NADH Fluorescence intensity
 float growthRate = 0.0;  // Specific growth rate (mu)
 
@@ -299,6 +300,12 @@ void updateSensors() {
   // Request temperature for next cycle
   sensors.requestTemperatures();
 
+  // Read UV Intensity (ADS Channel 3)
+  int16_t uvRaw = ads.readADC_SingleEnded(ADS_UV_CH);
+  if (uvRaw != -1) {
+    currentUV_V = (float)uvRaw * 0.0001875;
+  }
+
   // Read pH
   int16_t phRaw = ads.readADC_SingleEnded(ADS_PH_CH);
   if (phRaw == -1) { // Basic check for ADS failure
@@ -526,6 +533,7 @@ String getTelemetryJSON() {
   doc["temp"] = currentTemp;
   doc["mu"] = growthRate;
   doc["fluo"] = currentFluo;
+  doc["uv_v"] = currentUV_V;
   doc["timestamp"] = now.timestamp();
   doc["error"] = sensorError;
   String output;

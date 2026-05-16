@@ -22,6 +22,7 @@
 // ADS1115 Channels
 #define ADS_PH_CH 0
 #define ADS_OD_CH 1
+#define ADS_UV_CH 3
 
 // System Constants
 #define PH_TARGET 7.0
