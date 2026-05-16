@@ -239,8 +239,12 @@ void loop() {
     lastToggle = currentMillis;
   }
 
-  // Stirrer control (simple PWM)
-  analogWrite(STIRRER_PIN, stirrerSpeed);
+  // Stirrer control (simple PWM) - inhibited if sensor error
+  if (!sensorError) {
+    analogWrite(STIRRER_PIN, stirrerSpeed);
+  } else {
+    analogWrite(STIRRER_PIN, 0);
+  }
 }
 
 void controlTemp() {

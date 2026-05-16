@@ -14,11 +14,8 @@ const char index_html[] PROGMEM = R"rawliteral(
     h2 { color: #003366; }
     .value { font-size: 2.5rem; font-weight: bold; color: #2c3e50; }
     .unit { font-size: 1.2rem; color: #7f8c8d; }
-    button { padding: 12px 24px; font-size: 1rem; cursor: pointer; border-radius: 5px; border: none; background-color: #3498db; color: white; margin: 5px; transition: all 0.3s; }
+    button { padding: 12px 24px; font-size: 1rem; cursor: pointer; border-radius: 5px; border: none; background-color: #3498db; color: white; margin: 5px; transition: background 0.3s; }
     button:hover { background-color: #2980b9; }
-    button:active { transform: translateY(1px); }
-    button:focus-visible { outline: 3px solid #f39c12; outline-offset: 2px; }
-    button:disabled { background-color: #bdc3c7; cursor: not-allowed; transform: none; }
     .btn-download { background-color: #27ae60; }
     .status-error { color: #e74c3c; font-weight: bold; }
     input { padding: 8px; width: 60px; margin: 5px; }
@@ -26,7 +23,7 @@ const char index_html[] PROGMEM = R"rawliteral(
 </head>
 <body>
   <h1>Probiotic Biofermenter Dashboard</h1>
-  <div id="error-msg" class="status-error" style="display:none;" role="alert" aria-live="assertive">SENSOR ERROR DETECTED - SYSTEM IN FAILSAFE</div>
+  <div id="error-msg" class="status-error" style="display:none;">SENSOR ERROR DETECTED - SYSTEM IN FAILSAFE</div>
 
   <div class="card">
     <h2>pH Level</h2>
