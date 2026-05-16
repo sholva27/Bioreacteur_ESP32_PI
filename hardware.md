@@ -22,6 +22,7 @@
 | Fuses | 20A (main), 15A (heater), 5A (logic) | 1 set |
 | 1N4007 Diode | Flyback protection for pumps | 4 |
 | Thermal Fuse | 70°C Thermal Cutoff for safety | 1 |
+| LM358 Op-Amp | Dual Op-Amp (Optional for DIY sensors) | 1 |
 
 ## Pinout Mapping (ESP32-S3)
 
@@ -98,6 +99,20 @@ To detect metabolic activity beyond biomass (OD), specialized light sensors can 
 ### Practical Applications
 - **Redox Dyes**: Using a **TCS34725** to monitor the transition of **Resazurin** (blue/non-fluorescent) to **Resorufin** (pink/highly fluorescent) as a direct proxy for microbial respiration.
 - **Spectral Shift**: Using an **AS7262** to detect shifts in the absorption spectrum of the growth media caused by the secretion of specific metabolites or bacteriocins.
+
+## DIY Signal Conditioning (LM358)
+
+Integrating an **LM358 Dual Operational Amplifier** is highly recommended if you are building your own sensor interfaces rather than using pre-integrated modules (like the OPT101).
+
+### 1. Transimpedance Amplifier (TIA) for OD
+If using a raw photodiode (e.g., **BPW34**), the photocurrent produced is in the nanoampere/microampere range.
+- **Role**: The LM358 can be configured as a TIA to convert this tiny current into a 0-3.3V or 0-5V voltage signal for the ADS1115.
+- **Benefit**: Allows the use of extremely cheap photodiodes while maintaining linear response.
+
+### 2. Unity Gain Buffer for pH
+pH probes have an input impedance in the range of $10^{12} \Omega$.
+- **Role**: One half of the LM358 can act as a voltage follower (buffer). This prevents the ADS1115 from "loading" the pH probe, which would cause inaccurate and drifting readings.
+- **Note**: For better precision, a rail-to-rail op-amp with lower input bias current (like the **TL072** or **OPA2134**) is preferred, but the LM358 is a functional starting point available in most local kits.
 
 ## Sensor Options for OD600
 
