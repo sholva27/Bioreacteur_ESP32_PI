@@ -4,21 +4,26 @@
 const char index_html[] PROGMEM = R"rawliteral(
 <!DOCTYPE HTML><html>
 <head>
+  <meta charset="UTF-8">
   <title>Probiotic Biofermenter</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    body { font-family: Arial; text-align: center; margin:0px auto; padding-top: 30px; background-color: #f4f7f6; }
+    body { font-family: Arial, sans-serif; text-align: center; margin:0px auto; padding-top: 30px; background-color: #f4f7f6; }
     .card { background-color: white; box-shadow: 2px 2px 12px 1px rgba(140,140,140,.5); padding: 20px; width: 300px; display: inline-block; margin: 10px; border-radius: 10px; vertical-align: top;}
     .chart-container { width: 80%; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 2px 2px 12px 1px rgba(140,140,140,.5); margin-top: 20px;}
     h2 { color: #003366; }
     .value { font-size: 2.5rem; font-weight: bold; color: #2c3e50; }
     .unit { font-size: 1.2rem; color: #7f8c8d; }
-    button { padding: 12px 24px; font-size: 1rem; cursor: pointer; border-radius: 5px; border: none; background-color: #3498db; color: white; margin: 5px; transition: background 0.3s; }
+    button { padding: 12px 24px; font-size: 1rem; cursor: pointer; border-radius: 5px; border: none; background-color: #3498db; color: white; margin: 5px; transition: all 0.3s; }
     button:hover { background-color: #2980b9; }
+    button:focus-visible { outline: 3px solid #f1c40f; outline-offset: 2px; }
+    button:disabled { background-color: #95a5a6; cursor: not-allowed; }
     .btn-download { background-color: #27ae60; }
     .status-error { color: #e74c3c; font-weight: bold; }
-    input { padding: 8px; width: 60px; margin: 5px; }
+    #status-msg { margin: 10px; font-weight: bold; color: #27ae60; height: 1.2em; }
+    input { padding: 8px; width: 80px; margin: 5px; border: 1px solid #bdc3c7; border-radius: 4px; }
+    input:focus { outline: 2px solid #3498db; border-color: transparent; }
   </style>
 </head>
 <body>
@@ -57,18 +62,19 @@ const char index_html[] PROGMEM = R"rawliteral(
 
   <div class="card">
     <h2>Configuration</h2>
-    <label>pH Target:</label> <input type="number" id="target-ph" step="0.1"><br>
-    <label>Temp Target:</label> <input type="number" id="target-temp" step="0.5"><br>
-    <label>Stirrer Speed (0-255):</label> <input type="number" id="stirrer-speed"><br>
-    <label>Kp:</label> <input type="number" id="kp"><br>
-    <label>Ki:</label> <input type="number" id="ki"><br>
-    <label>Kd:</label> <input type="number" id="kd"><br>
+    <div id="status-msg"></div>
+    <label for="target-ph">pH Target:</label> <input type="number" id="target-ph" step="0.1"><br>
+    <label for="target-temp">Temp Target:</label> <input type="number" id="target-temp" step="0.5"><br>
+    <label for="stirrer-speed">Stirrer Speed (0-255):</label> <input type="number" id="stirrer-speed"><br>
+    <label for="kp">Kp:</label> <input type="number" id="kp"><br>
+    <label for="ki">Ki:</label> <input type="number" id="ki"><br>
+    <label for="kd">Kd:</label> <input type="number" id="kd"><br>
     <hr>
-    <label>Enable MQTT:</label> <input type="checkbox" id="mqtt-enabled"><br>
-    <label>MQTT Broker:</label> <input type="text" id="mqtt-broker"><br>
-    <button onclick="updateSettings()">Save Settings</button>
-    <button class="btn-download" onclick="window.location.href='/download_log'">Download Log</button>
-    <button onclick="togglePump('nutrient')">Manual Feed</button>
+    <label for="mqtt-enabled">Enable MQTT:</label> <input type="checkbox" id="mqtt-enabled"><br>
+    <label for="mqtt-broker">MQTT Broker:</label> <input type="text" id="mqtt-broker"><br>
+    <button onclick="updateSettings()" aria-label="Save all configuration settings">Save Settings</button>
+    <button class="btn-download" onclick="window.location.href='/download_log'" aria-label="Download data log CSV">Download Log</button>
+    <button id="btn-feed" onclick="togglePump('nutrient')" aria-label="Manually trigger nutrient feeding pump">Manual Feed</button>
   </div>
 
   <div class="card">
@@ -149,7 +155,17 @@ const char index_html[] PROGMEM = R"rawliteral(
        });
     }
 
+    function showStatus(msg, isError = false) {
+      const el = document.getElementById('status-msg');
+      el.innerText = msg;
+      el.style.color = isError ? "#e74c3c" : "#27ae60";
+      setTimeout(() => { el.innerText = ""; }, 3000);
+    }
+
     function updateSettings(extra = {}) {
+      const isManual = !Object.keys(extra).length;
+      if (isManual) showStatus("Saving...");
+
       fetch('/settings').then(r => r.json()).then(data => {
         var settings = data;
         settings.mqttEnabled = document.getElementById('mqtt-enabled').checked;
@@ -166,7 +182,9 @@ const char index_html[] PROGMEM = R"rawliteral(
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify(settings)
-        }).then(() => { if (!Object.keys(extra).length) alert("Settings Updated Successfully"); });
+        })
+        .then(r => { if(isManual) showStatus(r.ok ? "Settings Saved!" : "Save Failed", !r.ok); })
+        .catch(() => { if(isManual) showStatus("Error saving settings", true); });
       });
     }
 
@@ -198,7 +216,20 @@ const char index_html[] PROGMEM = R"rawliteral(
       });
     }, 5000);
 
-    function togglePump(pump) { fetch("/pump?type=" + pump); }
+    function togglePump(pump) {
+      fetch("/pump?type=" + pump).then(r => {
+        if (pump === 'nutrient' && r.ok) {
+          const btn = document.getElementById('btn-feed');
+          const originalText = btn.innerText;
+          btn.disabled = true;
+          btn.innerText = "Feeding...";
+          setTimeout(() => {
+            btn.disabled = false;
+            btn.innerText = originalText;
+          }, 5000);
+        }
+      });
+    }
     window.onload = loadSettings;
   </script>
 </body>
