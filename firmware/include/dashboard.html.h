@@ -16,6 +16,8 @@ const char index_html[] PROGMEM = R"rawliteral(
     .unit { font-size: 1.2rem; color: #7f8c8d; }
     button { padding: 12px 24px; font-size: 1rem; cursor: pointer; border-radius: 5px; border: none; background-color: #3498db; color: white; margin: 5px; transition: background 0.3s; }
     button:hover { background-color: #2980b9; }
+    button:focus-visible { outline: 3px solid #f1c40f; outline-offset: 2px; }
+    button:disabled { background-color: #bdc3c7; cursor: not-allowed; opacity: 0.7; }
     .btn-download { background-color: #27ae60; }
     .status-error { color: #e74c3c; font-weight: bold; }
     input { padding: 8px; width: 60px; margin: 5px; }
@@ -23,7 +25,7 @@ const char index_html[] PROGMEM = R"rawliteral(
 </head>
 <body>
   <h1>Probiotic Biofermenter Dashboard</h1>
-  <div id="error-msg" class="status-error" style="display:none;">SENSOR ERROR DETECTED - SYSTEM IN FAILSAFE</div>
+  <div id="error-msg" role="alert" class="status-error" style="display:none;">SENSOR ERROR DETECTED - SYSTEM IN FAILSAFE</div>
 
   <div class="card">
     <h2>pH Level</h2>
@@ -57,18 +59,18 @@ const char index_html[] PROGMEM = R"rawliteral(
 
   <div class="card">
     <h2>Configuration</h2>
-    <label>pH Target:</label> <input type="number" id="target-ph" step="0.1"><br>
-    <label>Temp Target:</label> <input type="number" id="target-temp" step="0.5"><br>
-    <label>Stirrer Speed (0-255):</label> <input type="number" id="stirrer-speed"><br>
-    <label>Kp:</label> <input type="number" id="kp"><br>
-    <label>Ki:</label> <input type="number" id="ki"><br>
-    <label>Kd:</label> <input type="number" id="kd"><br>
+    <label for="target-ph">pH Target:</label> <input type="number" id="target-ph" step="0.1"><br>
+    <label for="target-temp">Temp Target:</label> <input type="number" id="target-temp" step="0.5"><br>
+    <label for="stirrer-speed">Stirrer Speed (0-255):</label> <input type="number" id="stirrer-speed"><br>
+    <label for="kp">Kp:</label> <input type="number" id="kp"><br>
+    <label for="ki">Ki:</label> <input type="number" id="ki"><br>
+    <label for="kd">Kd:</label> <input type="number" id="kd"><br>
     <hr>
-    <label>Enable MQTT:</label> <input type="checkbox" id="mqtt-enabled"><br>
-    <label>MQTT Broker:</label> <input type="text" id="mqtt-broker"><br>
-    <button onclick="updateSettings()">Save Settings</button>
+    <label for="mqtt-enabled">Enable MQTT:</label> <input type="checkbox" id="mqtt-enabled"><br>
+    <label for="mqtt-broker">MQTT Broker:</label> <input type="text" id="mqtt-broker"><br>
+    <button id="save-btn" onclick="updateSettings()">Save Settings</button>
     <button class="btn-download" onclick="window.location.href='/download_log'">Download Log</button>
-    <button onclick="togglePump('nutrient')">Manual Feed</button>
+    <button id="feed-btn" onclick="togglePump('nutrient')">Manual Feed</button>
   </div>
 
   <div class="card">
@@ -150,6 +152,10 @@ const char index_html[] PROGMEM = R"rawliteral(
     }
 
     function updateSettings(extra = {}) {
+      const saveBtn = document.getElementById('save-btn');
+      const originalText = saveBtn.innerText;
+      if (!Object.keys(extra).length) saveBtn.innerText = "Saving...";
+
       fetch('/settings').then(r => r.json()).then(data => {
         var settings = data;
         settings.mqttEnabled = document.getElementById('mqtt-enabled').checked;
@@ -166,7 +172,24 @@ const char index_html[] PROGMEM = R"rawliteral(
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify(settings)
-        }).then(() => { if (!Object.keys(extra).length) alert("Settings Updated Successfully"); });
+        }).then(() => {
+          if (!Object.keys(extra).length) {
+            saveBtn.innerText = "Saved!";
+            setTimeout(() => { saveBtn.innerText = originalText; }, 2000);
+          }
+        }).catch(err => {
+          console.error("Failed to save settings:", err);
+          if (!Object.keys(extra).length) {
+            saveBtn.innerText = "Error!";
+            setTimeout(() => { saveBtn.innerText = originalText; }, 2000);
+          }
+        });
+      }).catch(err => {
+        console.error("Failed to fetch settings:", err);
+        if (!Object.keys(extra).length) {
+          saveBtn.innerText = "Error!";
+          setTimeout(() => { saveBtn.innerText = originalText; }, 2000);
+        }
       });
     }
 
@@ -198,7 +221,18 @@ const char index_html[] PROGMEM = R"rawliteral(
       });
     }, 5000);
 
-    function togglePump(pump) { fetch("/pump?type=" + pump); }
+    function togglePump(pump) {
+      const feedBtn = document.getElementById('feed-btn');
+      if (pump === 'nutrient' && feedBtn) {
+        feedBtn.disabled = true;
+        feedBtn.innerText = "Feeding...";
+        setTimeout(() => {
+          feedBtn.disabled = false;
+          feedBtn.innerText = "Manual Feed";
+        }, 5000);
+      }
+      fetch("/pump?type=" + pump).catch(err => console.error("Pump toggle failed:", err));
+    }
     window.onload = loadSettings;
   </script>
 </body>
