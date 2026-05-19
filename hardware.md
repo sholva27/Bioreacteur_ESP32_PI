@@ -193,9 +193,11 @@ Integrating these components can transition the biofermenter into an industrial-
 - **Use Case**: Attach RFID tags to fermentation vessels.
 - **Benefit**: Scanning a vessel can automatically load its specific calibration curve (e.g., if different vessels have slightly different optical paths) and associate log files with a unique Batch ID.
 
-### 2. AT24C256 EEPROM (Robust Storage)
-- **Use Case**: Redundant storage for PID constants and calibration data.
-- **Benefit**: While the ESP32 has internal Flash, an external EEPROM allows for significantly more write cycles and provides a physical "backup" that can be moved to a different controller in case of ESP32 failure.
+### 2. AT24C256 EEPROM (Industrial Persistence)
+- **Use Case**: **State Recovery** for long-duration fermentation. Store high-frequency data like current pump total volumes, elapsed cycle time, and log indices.
+- **Benefit**:
+    - **Flash Protection**: Prevents wearing out the ESP32's internal Flash memory (which has limited write cycles compared to EEPROM).
+    - **Power Failure Resilience**: Allows the system to resume an experiment exactly where it left off after a power cut, without needing to re-initialize calibration or lose cumulative feeding data.
 
 ### 3. Turbidity Sensor (Complementary OD)
 - **Use Case**: Measuring very high density or large-particle cultures.
