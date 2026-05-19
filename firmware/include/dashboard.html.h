@@ -5,6 +5,7 @@ const char index_html[] PROGMEM = R"rawliteral(
 <!DOCTYPE HTML><html>
 <head>
   <title>Probiotic Biofermenter</title>
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
@@ -16,6 +17,8 @@ const char index_html[] PROGMEM = R"rawliteral(
     .unit { font-size: 1.2rem; color: #7f8c8d; }
     button { padding: 12px 24px; font-size: 1rem; cursor: pointer; border-radius: 5px; border: none; background-color: #3498db; color: white; margin: 5px; transition: background 0.3s; }
     button:hover { background-color: #2980b9; }
+    button:focus-visible, input:focus-visible { outline: 3px solid #f39c12; outline-offset: 2px; }
+    button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
     .btn-download { background-color: #27ae60; }
     .status-error { color: #e74c3c; font-weight: bold; }
     input { padding: 8px; width: 60px; margin: 5px; }
@@ -23,7 +26,7 @@ const char index_html[] PROGMEM = R"rawliteral(
 </head>
 <body>
   <h1>Probiotic Biofermenter Dashboard</h1>
-  <div id="error-msg" class="status-error" style="display:none;">SENSOR ERROR DETECTED - SYSTEM IN FAILSAFE</div>
+  <div id="error-msg" class="status-error" style="display:none;" role="alert">SENSOR ERROR DETECTED - SYSTEM IN FAILSAFE</div>
 
   <div class="card">
     <h2>pH Level</h2>
@@ -57,18 +60,18 @@ const char index_html[] PROGMEM = R"rawliteral(
 
   <div class="card">
     <h2>Configuration</h2>
-    <label>pH Target:</label> <input type="number" id="target-ph" step="0.1"><br>
-    <label>Temp Target:</label> <input type="number" id="target-temp" step="0.5"><br>
-    <label>Stirrer Speed (0-255):</label> <input type="number" id="stirrer-speed"><br>
-    <label>Kp:</label> <input type="number" id="kp"><br>
-    <label>Ki:</label> <input type="number" id="ki"><br>
-    <label>Kd:</label> <input type="number" id="kd"><br>
+    <label for="target-ph">pH Target:</label> <input type="number" id="target-ph" step="0.1"><br>
+    <label for="target-temp">Temp Target:</label> <input type="number" id="target-temp" step="0.5"><br>
+    <label for="stirrer-speed">Stirrer Speed (0-255):</label> <input type="number" id="stirrer-speed"><br>
+    <label for="kp">Kp:</label> <input type="number" id="kp"><br>
+    <label for="ki">Ki:</label> <input type="number" id="ki"><br>
+    <label for="kd">Kd:</label> <input type="number" id="kd"><br>
     <hr>
-    <label>Enable MQTT:</label> <input type="checkbox" id="mqtt-enabled"><br>
-    <label>MQTT Broker:</label> <input type="text" id="mqtt-broker"><br>
-    <button onclick="updateSettings()">Save Settings</button>
+    <label for="mqtt-enabled">Enable MQTT:</label> <input type="checkbox" id="mqtt-enabled"><br>
+    <label for="mqtt-broker">MQTT Broker:</label> <input type="text" id="mqtt-broker"><br>
+    <button id="btn-save" onclick="updateSettings()">Save Settings</button>
     <button class="btn-download" onclick="window.location.href='/download_log'">Download Log</button>
-    <button onclick="togglePump('nutrient')">Manual Feed</button>
+    <button id="btn-feed" onclick="togglePump('nutrient')">Manual Feed</button>
   </div>
 
   <div class="card">
@@ -150,6 +153,13 @@ const char index_html[] PROGMEM = R"rawliteral(
     }
 
     function updateSettings(extra = {}) {
+      const btn = document.getElementById('btn-save');
+      const originalText = btn.innerHTML;
+      if (!Object.keys(extra).length) {
+        btn.disabled = true;
+        btn.innerHTML = "Saving...";
+      }
+
       fetch('/settings').then(r => r.json()).then(data => {
         var settings = data;
         settings.mqttEnabled = document.getElementById('mqtt-enabled').checked;
@@ -162,11 +172,18 @@ const char index_html[] PROGMEM = R"rawliteral(
         settings.kd = parseFloat(document.getElementById('kd').value);
 
         Object.assign(settings, extra);
-        fetch('/set', {
+        return fetch('/set', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify(settings)
-        }).then(() => { if (!Object.keys(extra).length) alert("Settings Updated Successfully"); });
+        });
+      })
+      .then(() => { if (!Object.keys(extra).length) { btn.innerHTML = "Saved!"; setTimeout(() => { btn.disabled = false; btn.innerHTML = originalText; }, 2000); } })
+      .catch(err => {
+        console.error(err);
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+        alert("Update failed!");
       });
     }
 
@@ -198,7 +215,26 @@ const char index_html[] PROGMEM = R"rawliteral(
       });
     }, 5000);
 
-    function togglePump(pump) { fetch("/pump?type=" + pump); }
+    function togglePump(pump) {
+      const btn = document.getElementById('btn-feed');
+      const originalText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = "Feeding...";
+
+      fetch("/pump?type=" + pump)
+        .then(() => {
+          // Manual feed lasts 5000ms per config.h
+          setTimeout(() => {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+          }, 5000);
+        })
+        .catch(err => {
+          console.error(err);
+          btn.disabled = false;
+          btn.innerHTML = originalText;
+        });
+    }
     window.onload = loadSettings;
   </script>
 </body>
