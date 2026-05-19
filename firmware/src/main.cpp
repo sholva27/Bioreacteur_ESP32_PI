@@ -44,7 +44,8 @@ float currentTemp = 0.0;
 float currentPH_V = 0.0;
 float currentOD_V = 0.0;
 float currentUV_V = 0.0;  // UV Intensity voltage
-float currentFluo = 0.0; // NADH Fluorescence intensity
+float currentFluo = 0.0; // NADH Fluorescence intensity (460nm)
+float currentRibo = 0.0;  // Riboflavine intensity (520nm)
 float growthRate = 0.0;  // Specific growth rate (mu)
 
 float lastOD = 0.0;
@@ -271,20 +272,25 @@ void controlTemp() {
 }
 
 void updateFluo() {
-  // Read NADH Fluorescence (340nm exc / 460nm em)
-  // For this implementation, we use the AS7341 spectral sensor logic
-  // (Assuming AS7341 library is integrated or using ADS channel if analog)
-
+  // Read Metabolic Activity via Fluorescence (340nm exc)
   digitalWrite(FLUO_LED_PIN, HIGH);
-  delayMicroseconds(500);
+  delayMicroseconds(1000); // Allow LED and sensor to stabilize
 
-  // Example: Using ADS Channel 2 if using an analog high-sensitivity TIA circuit
-  int16_t fluoRaw = ads.readADC_SingleEnded(2);
+  // AS7341 Spectral Sensor Logic (I2C) - Ideal for LAB cultures (NADH + Riboflavin)
+  /*
+  currentFluo = as7341.readChannel(AS7341_CHANNEL_460nm); // F3 (NADH)
+  currentRibo = as7341.readChannel(AS7341_CHANNEL_520nm); // F5 (Riboflavin)
+  */
+
+  // Alternative: Using ADS1115 if using analog TIA circuits
+  int16_t nadhRaw = ads.readADC_SingleEnded(2);
+  if (nadhRaw != -1) currentFluo = (float)nadhRaw * 0.0001875;
+
+  // Placeholder for Riboflavin channel if using a second TIA
+  // int16_t riboRaw = ads.readADC_SingleEnded(3);
+  // if (riboRaw != -1) currentRibo = (float)riboRaw * 0.0001875;
+
   digitalWrite(FLUO_LED_PIN, LOW);
-
-  if (fluoRaw != -1) {
-    currentFluo = (float)fluoRaw * 0.0001875;
-  }
 }
 
 void updateSensors() {
@@ -533,6 +539,7 @@ String getTelemetryJSON() {
   doc["temp"] = currentTemp;
   doc["mu"] = growthRate;
   doc["fluo"] = currentFluo;
+  doc["ribo"] = currentRibo;
   doc["uv_v"] = currentUV_V;
   doc["timestamp"] = now.timestamp();
   doc["error"] = sensorError;

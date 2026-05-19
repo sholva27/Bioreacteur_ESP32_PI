@@ -31,6 +31,8 @@ Monitoring the intracellular redox state provides the most advanced layer of bio
 - **Biochemical Basis**: Reduced Nicotinamide Adenine Dinucleotide (NADH) is a key electron carrier in metabolism. It naturally fluoresces when excited at ~340nm, emitting light at ~460nm. NAD+ (the oxidized form) does not.
 - **Metabolic Activity Indicator**: The intensity of the 460nm emission is a direct proxy for the concentration of NADH. A high NADH level typically indicates active glycolysis and strong metabolic "vigor".
 - **Phase Detection**: Changes in fluorescence often signal the transition between growth phases (e.g., shifts from exponential to stationary) much faster than OD measurements, as the internal chemistry reacts before total biomass stabilizes.
+- **Correction for Riboflavin (Vitamin B2)**: Lactic Acid Bacteria (LAB) media (like MRS or whey) often contains Riboflavin. This molecule fluoresces at **520nm** when excited by UV/Blue light.
+    - **Strategy**: By monitoring both 460nm (NADH) and 520nm (Riboflavin), the system can distinguish between biological activity and background media noise. If the 520nm signal rises proportionally with the 460nm signal, it suggests media interference rather than metabolic flux.
 
 ### 2. Headspace Pressure and Gas Production
 Many probiotic bacteria (e.g., *Lactobacillus*, *Bifidobacterium*) produce $CO_2$ or other gases as metabolic byproducts. In a sealed or semi-sealed bioreactor:
