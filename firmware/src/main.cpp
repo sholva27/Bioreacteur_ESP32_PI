@@ -483,6 +483,9 @@ void emergencyStop() {
 }
 
 void loadSettings() {
+  // Logic Hook: Load high-frequency state from AT24C256 EEPROM if available
+  // e.g., currentPumpRuntime = eeprom.read(ADDR_PUMP_STATE);
+
   File file = SPIFFS.open("/settings.json", FILE_READ);
   if(!file) return;
   StaticJsonDocument<1024> doc;
@@ -504,6 +507,9 @@ void loadSettings() {
 }
 
 void saveSettings() {
+  // Logic Hook: Save high-frequency state to AT24C256 EEPROM
+  // e.g., eeprom.write(ADDR_PUMP_STATE, currentPumpRuntime);
+
   File file = SPIFFS.open("/settings.json", FILE_WRITE);
   if(!file) return;
   StaticJsonDocument<1024> doc;
