@@ -99,17 +99,25 @@ void setup() {
   Wire.begin(I2C_SDA, I2C_SCL);
 
   // Initialize Sensors
+#if USE_ADS1115
   if (!ads.begin()) {
     Serial.println("Failed to initialize ADS1115.");
     sensorError = true;
   }
+#endif
+
+#if USE_RTC
   if (!rtc.begin()) {
     Serial.println("Couldn't find RTC");
     sensorError = true;
   }
+#endif
+
+#if USE_TEMP_SENSOR
   sensors.begin();
   sensors.setWaitForConversion(false); // Non-blocking temperature reads
   sensors.requestTemperatures();       // Start first conversion
+#endif
 
   // Initialize Pins
   pinMode(PUMP_ACID_PIN, OUTPUT);
@@ -216,12 +224,14 @@ void loop() {
     lastSensorRead = currentMillis;
 
     // Control logic dependent on fresh sensor data
+#if USE_ACTUATORS
     if (!sensorError) {
       controlPH();
       controlTemp();
     } else {
       emergencyStop();
     }
+#endif
   }
 
   // Manual touch button logic
@@ -294,7 +304,9 @@ void updateFluo() {
 
 void updateSensors() {
   unsigned long currentMillis = millis();
+  sensorError = false; // Reset error flag at start of cycle
 
+#if USE_TEMP_SENSOR
   // Read Temperature result from previous request
   float temp = sensors.getTempCByIndex(0);
   if (temp != DEVICE_DISCONNECTED_C) {
@@ -304,29 +316,40 @@ void updateSensors() {
   }
   // Request temperature for next cycle
   sensors.requestTemperatures();
+#endif
 
+#if USE_ADS1115
+  #if USE_UV_SENSOR
   // Read UV Intensity (ADS Channel 3)
   int16_t uvRaw = ads.readADC_SingleEnded(ADS_UV_CH);
   if (uvRaw != -1) {
     currentUV_V = (float)uvRaw * 0.0001875;
+    if (VERBOSE_ADC) Serial.printf("UV_V: %.4fV\n", currentUV_V);
   }
+  #endif
 
+  #if USE_PRESSURE_SENSOR
   // Read Pressure (ADS Channel 2)
   int16_t pressureRaw = ads.readADC_SingleEnded(ADS_PRESSURE_CH);
   if (pressureRaw != -1) {
     currentPressure_V = (float)pressureRaw * 0.0001875;
+    if (VERBOSE_ADC) Serial.printf("PRES_V: %.4fV\n", currentPressure_V);
   }
+  #endif
 
+  #if USE_PH_PROBE
   // Read pH
   int16_t phRaw = ads.readADC_SingleEnded(ADS_PH_CH);
-  if (phRaw == -1) { // Basic check for ADS failure
-     sensorError = true;
-     return;
+  if (phRaw != -1) {
+    currentPH_V = (float)phRaw * 0.0001875;
+    currentPH = 7.0 + (currentPH_V * phSlope) + phOffset;
+    if (VERBOSE_ADC) Serial.printf("PH_V: %.4fV -> PH: %.2f\n", currentPH_V, currentPH);
+  } else {
+    sensorError = true;
   }
-  // 0.0001875 is the voltage step for +/- 6.144V range
-  currentPH_V = (float)phRaw * 0.0001875;
-  currentPH = 7.0 + (currentPH_V * phSlope) + phOffset;
+  #endif
 
+  #if USE_OD_SENSOR
   // Read OD
   digitalWrite(OD_LIGHT_PIN, HIGH);
   delayMicroseconds(500);
@@ -335,6 +358,7 @@ void updateSensors() {
 
   // OD Calculation with guard
   currentOD_V = (float)odRaw * 0.0001875;
+  if (VERBOSE_ADC) Serial.printf("OD_V: %.4fV\n", currentOD_V);
   if (currentOD_V > 0.001) {
     if (odZeroVoltage > 0.1) {
       currentOD = log10(odZeroVoltage / currentOD_V) * OD_CALIBRATION_FACTOR;
@@ -344,6 +368,8 @@ void updateSensors() {
   } else {
     currentOD = 4.0; // Max out at high density
   }
+  #endif
+#endif
 
   // Growth Rate Estimation (Specific Growth Rate mu)
   if (lastODTime > 0 && currentOD > 0.05 && lastOD > 0.05) {
@@ -358,8 +384,6 @@ void updateSensors() {
      lastOD = currentOD;
      lastODTime = currentMillis;
   }
-
-  sensorError = false; // Reset if readings successful
 }
 
 void controlPH() {
@@ -379,6 +403,7 @@ void controlPH() {
 
   if (dt > 0) {
     phIntegral += error * dt;
+    phIntegral = constrain(phIntegral, -50.0, 50.0); // Simple anti-windup cap
     float phDerivative = (error - lastPhError) / dt;
     float pidOutput = (Kp * error) + (Ki * phIntegral) + (Kd * phDerivative);
     pidOutput = abs(pidOutput);
