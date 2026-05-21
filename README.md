@@ -5,6 +5,7 @@ An advanced, open-source automated fermentation system optimized for probiotic c
 ## Features
 
 - **High-Precision Sensing**: Utilizes the ADS1115 16-bit ADC for stable and accurate pH and OD readings.
+- **Metabolic Monitoring**: Integrated AS7341 spectral sensor for NADH Fluorescence (340nm/460nm) and headspace pressure sensing for gas evolution rate.
 - **Automated pH Control**: Dual-pump system for acid and base titration to maintain optimal pH levels.
 - **Automated Feeding**: Programmable nutrient delivery cycles based on time or OD thresholds.
 - **OD Monitoring**: Supports both 650nm Laser and 600nm LED configurations for biomass estimation.
@@ -20,6 +21,7 @@ An advanced, open-source automated fermentation system optimized for probiotic c
 - **RTC**: DS3231
 - **pH Probe**: Industrial BNC probe with signal conditioner
 - **OD Sensor**: 650nm Laser / 600nm LED + Photodiode
+- **Metabolic Sensors**: AS7341 Spectral Sensor, XGZP6847A Pressure Sensor
 - **Actuators**: 12V Peristaltic pumps (Acid, Base, Nutrients)
 - **Power**: 12V DC Input (regulated to 5V and 3.3V)
 
