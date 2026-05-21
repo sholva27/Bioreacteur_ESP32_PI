@@ -4,6 +4,7 @@
 const char index_html[] PROGMEM = R"rawliteral(
 <!DOCTYPE HTML><html>
 <head>
+  <meta charset="UTF-8">
   <title>Probiotic Biofermenter</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -19,6 +20,8 @@ const char index_html[] PROGMEM = R"rawliteral(
     .btn-download { background-color: #27ae60; }
     .status-error { color: #e74c3c; font-weight: bold; }
     input { padding: 8px; width: 60px; margin: 5px; }
+    *:focus-visible { outline: 3px solid #f39c12; outline-offset: 2px; }
+    button:disabled { background-color: #95a5a6; cursor: not-allowed; }
   </style>
 </head>
 <body>
@@ -58,18 +61,18 @@ const char index_html[] PROGMEM = R"rawliteral(
 
   <div class="card">
     <h2>Configuration</h2>
-    <label>pH Target:</label> <input type="number" id="target-ph" step="0.1"><br>
-    <label>Temp Target:</label> <input type="number" id="target-temp" step="0.5"><br>
-    <label>Stirrer Speed (0-255):</label> <input type="number" id="stirrer-speed"><br>
-    <label>Kp:</label> <input type="number" id="kp"><br>
-    <label>Ki:</label> <input type="number" id="ki"><br>
-    <label>Kd:</label> <input type="number" id="kd"><br>
+    <label for="target-ph">pH Target:</label> <input type="number" id="target-ph" step="0.1"><br>
+    <label for="target-temp">Temp Target:</label> <input type="number" id="target-temp" step="0.5"><br>
+    <label for="stirrer-speed">Stirrer Speed (0-255):</label> <input type="number" id="stirrer-speed"><br>
+    <label for="kp">Kp:</label> <input type="number" id="kp"><br>
+    <label for="ki">Ki:</label> <input type="number" id="ki"><br>
+    <label for="kd">Kd:</label> <input type="number" id="kd"><br>
     <hr>
-    <label>Enable MQTT:</label> <input type="checkbox" id="mqtt-enabled"><br>
-    <label>MQTT Broker:</label> <input type="text" id="mqtt-broker"><br>
-    <button onclick="updateSettings()">Save Settings</button>
+    <label for="mqtt-enabled">Enable MQTT:</label> <input type="checkbox" id="mqtt-enabled"><br>
+    <label for="mqtt-broker">MQTT Broker:</label> <input type="text" id="mqtt-broker"><br>
+    <button id="save-btn" onclick="updateSettings()">Save Settings</button>
     <button class="btn-download" onclick="window.location.href='/download_log'">Download Log</button>
-    <button onclick="togglePump('nutrient')">Manual Feed</button>
+    <button id="feed-btn" onclick="togglePump('nutrient')">Manual Feed</button>
   </div>
 
   <div class="card">
@@ -112,45 +115,61 @@ const char index_html[] PROGMEM = R"rawliteral(
     });
 
     function loadSettings() {
-      fetch('/settings').then(r => r.json()).then(data => {
-        document.getElementById('target-ph').value = data.phTarget;
-        document.getElementById('target-temp').value = data.tempTarget;
-        document.getElementById('stirrer-speed').value = data.stirrerSpeed;
-        document.getElementById('kp').value = data.kp;
-        document.getElementById('ki').value = data.ki;
-        document.getElementById('kd').value = data.kd;
-        document.getElementById('mqtt-enabled').checked = data.mqttEnabled;
-        document.getElementById('mqtt-broker').value = data.mqttBroker;
-      });
+      fetch('/settings')
+        .then(r => r.json())
+        .then(data => {
+          document.getElementById('target-ph').value = data.phTarget;
+          document.getElementById('target-temp').value = data.tempTarget;
+          document.getElementById('stirrer-speed').value = data.stirrerSpeed;
+          document.getElementById('kp').value = data.kp;
+          document.getElementById('ki').value = data.ki;
+          document.getElementById('kd').value = data.kd;
+          document.getElementById('mqtt-enabled').checked = data.mqttEnabled;
+          document.getElementById('mqtt-broker').value = data.mqttBroker;
+        })
+        .catch(err => console.error('Failed to load settings:', err));
     }
 
     var lastPh7V = 0;
     var lastPh4V = 0;
 
     function calibratePH(value) {
-       fetch('/data').then(r => r.json()).then(data => {
-          if (value == 7.0) {
-            lastPh7V = data.ph_v;
-            alert("pH 7.0 set to " + lastPh7V + "V. Now place in pH 4.0 and calibrate.");
-            updateSettings({phOffset: -lastPh7V});
-          } else if (value == 4.0) {
-            lastPh4V = data.ph_v;
-            var newSlope = 3.0 / (lastPh7V - lastPh4V);
-            var newOffset = 0 - (lastPh7V * newSlope);
-            updateSettings({phSlope: newSlope, phOffset: newOffset});
-            alert("pH Calibrated! Slope: " + newSlope.toFixed(2));
-          }
-       });
+       fetch('/data')
+        .then(r => r.json())
+        .then(data => {
+            if (value == 7.0) {
+              lastPh7V = data.ph_v;
+              alert("pH 7.0 set to " + lastPh7V + "V. Now place in pH 4.0 and calibrate.");
+              updateSettings({phOffset: -lastPh7V});
+            } else if (value == 4.0) {
+              lastPh4V = data.ph_v;
+              var newSlope = 3.0 / (lastPh7V - lastPh4V);
+              var newOffset = 0 - (lastPh7V * newSlope);
+              updateSettings({phSlope: newSlope, phOffset: newOffset});
+              alert("pH Calibrated! Slope: " + newSlope.toFixed(2));
+            }
+        })
+        .catch(err => console.error('pH Calibration failed:', err));
     }
 
     function calibrateODZero() {
-       fetch('/data').then(r => r.json()).then(data => {
-          updateSettings({odZero: data.od_v});
-          alert("OD Blank set to " + data.od_v + "V");
-       });
+       fetch('/data')
+        .then(r => r.json())
+        .then(data => {
+            updateSettings({odZero: data.od_v});
+            alert("OD Blank set to " + data.od_v + "V");
+        })
+        .catch(err => console.error('OD Calibration failed:', err));
     }
 
     function updateSettings(extra = {}) {
+      const saveBtn = document.getElementById('save-btn');
+      const originalText = saveBtn.innerText;
+      if (!Object.keys(extra).length) {
+        saveBtn.disabled = true;
+        saveBtn.innerText = 'Saving...';
+      }
+
       fetch('/settings').then(r => r.json()).then(data => {
         var settings = data;
         settings.mqttEnabled = document.getElementById('mqtt-enabled').checked;
@@ -163,44 +182,80 @@ const char index_html[] PROGMEM = R"rawliteral(
         settings.kd = parseFloat(document.getElementById('kd').value);
 
         Object.assign(settings, extra);
-        fetch('/set', {
+        return fetch('/set', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify(settings)
-        }).then(() => { if (!Object.keys(extra).length) alert("Settings Updated Successfully"); });
+        });
+      }).then(() => {
+        if (!Object.keys(extra).length) {
+          saveBtn.innerText = 'Saved!';
+          setTimeout(() => {
+            saveBtn.disabled = false;
+            saveBtn.innerText = originalText;
+          }, 2000);
+        }
+      }).catch(err => {
+        console.error('Update failed:', err);
+        if (!Object.keys(extra).length) {
+          saveBtn.disabled = false;
+          saveBtn.innerText = originalText;
+          alert("Failed to save settings");
+        }
       });
     }
 
     setInterval(function ( ) {
-      fetch('/data').then(r => r.json()).then(data => {
-        document.getElementById("ph").innerHTML = data.ph.toFixed(2);
-        document.getElementById("od").innerHTML = data.od.toFixed(3);
-        document.getElementById("temp").innerHTML = data.temp.toFixed(1);
-        document.getElementById("mu").innerHTML = data.mu.toFixed(2);
-        document.getElementById("fluo").innerHTML = data.fluo.toFixed(4);
-        document.getElementById("ribo").innerHTML = data.ribo.toFixed(4);
-        document.getElementById("uv-v").innerHTML = data.uv_v.toFixed(4);
-        document.getElementById("ph-v").innerHTML = data.ph_v.toFixed(4);
-        document.getElementById("od-v").innerHTML = data.od_v.toFixed(4);
+      fetch('/data')
+        .then(r => r.json())
+        .then(data => {
+          document.getElementById("ph").innerHTML = data.ph.toFixed(2);
+          document.getElementById("od").innerHTML = data.od.toFixed(3);
+          document.getElementById("temp").innerHTML = data.temp.toFixed(1);
+          document.getElementById("mu").innerHTML = data.mu.toFixed(2);
+          document.getElementById("fluo").innerHTML = data.fluo.toFixed(4);
+          document.getElementById("ribo").innerHTML = data.ribo.toFixed(4);
+          document.getElementById("uv-v").innerHTML = data.uv_v.toFixed(4);
+          document.getElementById("ph-v").innerHTML = data.ph_v.toFixed(4);
+          document.getElementById("od-v").innerHTML = data.od_v.toFixed(4);
 
-        // Update Chart
-        var now = new Date().toLocaleTimeString();
-        chart.data.labels.push(now);
-        chart.data.datasets[0].data.push(data.ph);
-        chart.data.datasets[1].data.push(data.od);
-        if(chart.data.labels.length > 20) {
-          chart.data.labels.shift();
-          chart.data.datasets[0].data.shift();
-          chart.data.datasets[1].data.shift();
-        }
-        chart.update();
+          // Update Chart
+          var now = new Date().toLocaleTimeString();
+          chart.data.labels.push(now);
+          chart.data.datasets[0].data.push(data.ph);
+          chart.data.datasets[1].data.push(data.od);
+          if(chart.data.labels.length > 20) {
+            chart.data.labels.shift();
+            chart.data.datasets[0].data.shift();
+            chart.data.datasets[1].data.shift();
+          }
+          chart.update();
 
-        if (data.error) document.getElementById("error-msg").style.display = "block";
-        else document.getElementById("error-msg").style.display = "none";
-      });
+          if (data.error) document.getElementById("error-msg").style.display = "block";
+          else document.getElementById("error-msg").style.display = "none";
+        })
+        .catch(err => console.error('Data fetch failed:', err));
     }, 5000);
 
-    function togglePump(pump) { fetch("/pump?type=" + pump); }
+    function togglePump(pump) {
+      const btn = document.getElementById('feed-btn');
+      const originalText = btn.innerText;
+      if (pump === 'nutrient') {
+        btn.disabled = true;
+        btn.innerText = 'Feeding...';
+        setTimeout(() => {
+          btn.disabled = false;
+          btn.innerText = originalText;
+        }, 5000);
+      }
+      fetch("/pump?type=" + pump).catch(err => {
+        console.error('Pump toggle failed:', err);
+        if (pump === 'nutrient') {
+          btn.disabled = false;
+          btn.innerText = originalText;
+        }
+      });
+    }
     window.onload = loadSettings;
   </script>
 </body>
