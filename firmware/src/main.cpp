@@ -156,10 +156,29 @@ void setup() {
   server.on("/pump", HTTP_GET, [](AsyncWebServerRequest *request){
     if(request->hasParam("type")) {
       String type = request->getParam("type")->value();
-      if(type == "nutrient") {
-        nutrientPumpActive = true;
-        nutrientPumpStartTime = millis();
-        digitalWrite(PUMP_NUTRIENT_PIN, HIGH);
+      long duration = FEEDING_DURATION_MS;
+      if(request->hasParam("duration")) {
+        duration = request->getParam("duration")->value().toInt();
+      }
+
+      int pin = -1;
+      if(type == "nutrient") pin = PUMP_NUTRIENT_PIN;
+      else if(type == "acid") pin = PUMP_ACID_PIN;
+      else if(type == "base") pin = PUMP_BASE_PIN;
+
+      if(pin != -1) {
+        digitalWrite(pin, HIGH);
+        // Using a Lambda with a timer for specific durations
+        // Note: For simplicity in this skeleton, we handle only nutrient in the main loop
+        // but this logic can be extended for all pumps.
+        if (type == "nutrient") {
+          nutrientPumpActive = true;
+          nutrientPumpStartTime = millis();
+        } else {
+          // Manual/Calibration override for other pumps
+          delay(duration > 5000 ? 5000 : duration); // Safety cap for sync delay
+          digitalWrite(pin, LOW);
+        }
       }
     }
     request->send(200, "text/plain", "OK");
