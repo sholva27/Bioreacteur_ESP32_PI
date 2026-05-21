@@ -36,6 +36,11 @@ const char index_html[] PROGMEM = R"rawliteral(
   </div>
 
   <div class="card">
+    <h2>Headspace Pressure</h2>
+    <p><span class="value" id="pres-v">--</span> <span class="unit">V</span></p>
+  </div>
+
+  <div class="card">
     <h2>Temperature</h2>
     <p><span class="value" id="temp">--</span> <span class="unit">°C</span></p>
   </div>
@@ -180,6 +185,7 @@ const char index_html[] PROGMEM = R"rawliteral(
         document.getElementById("fluo").innerHTML = data.fluo.toFixed(4);
         document.getElementById("ribo").innerHTML = data.ribo.toFixed(4);
         document.getElementById("uv-v").innerHTML = data.uv_v.toFixed(4);
+        document.getElementById("pres-v").innerHTML = data.pres_v.toFixed(4);
         document.getElementById("ph-v").innerHTML = data.ph_v.toFixed(4);
         document.getElementById("od-v").innerHTML = data.od_v.toFixed(4);
 

@@ -44,6 +44,7 @@ float currentTemp = 0.0;
 float currentPH_V = 0.0;
 float currentOD_V = 0.0;
 float currentUV_V = 0.0;  // UV Intensity voltage
+float currentPressure_V = 0.0; // Headspace pressure voltage
 float currentFluo = 0.0; // NADH Fluorescence intensity (460nm)
 float currentRibo = 0.0;  // Riboflavine intensity (520nm)
 float growthRate = 0.0;  // Specific growth rate (mu)
@@ -276,19 +277,17 @@ void updateFluo() {
   digitalWrite(FLUO_LED_PIN, HIGH);
   delayMicroseconds(1000); // Allow LED and sensor to stabilize
 
-  // AS7341 Spectral Sensor Logic (I2C) - Ideal for LAB cultures (NADH + Riboflavin)
+  // AS7341 Spectral Sensor Logic (I2C) - Preferred for LAB cultures (NADH + Riboflavin)
+  // These are logic hooks; implementation requires Adafruit_AS7341 library.
   /*
+  as7341.setLED(true); // Internal LED or use external via FLUO_LED_PIN
   currentFluo = as7341.readChannel(AS7341_CHANNEL_460nm); // F3 (NADH)
   currentRibo = as7341.readChannel(AS7341_CHANNEL_520nm); // F5 (Riboflavin)
+  as7341.setLED(false);
   */
 
-  // Alternative: Using ADS1115 if using analog TIA circuits
-  int16_t nadhRaw = ads.readADC_SingleEnded(2);
-  if (nadhRaw != -1) currentFluo = (float)nadhRaw * 0.0001875;
-
-  // Placeholder for Riboflavin channel if using a second TIA
-  // int16_t riboRaw = ads.readADC_SingleEnded(3);
-  // if (riboRaw != -1) currentRibo = (float)riboRaw * 0.0001875;
+  // Note: ADS1115 Channels 2 and 3 are used for Pressure and UV.
+  // If using analog fluorescence sensors, prioritize channels in config.h.
 
   digitalWrite(FLUO_LED_PIN, LOW);
 }
@@ -310,6 +309,12 @@ void updateSensors() {
   int16_t uvRaw = ads.readADC_SingleEnded(ADS_UV_CH);
   if (uvRaw != -1) {
     currentUV_V = (float)uvRaw * 0.0001875;
+  }
+
+  // Read Pressure (ADS Channel 2)
+  int16_t pressureRaw = ads.readADC_SingleEnded(ADS_PRESSURE_CH);
+  if (pressureRaw != -1) {
+    currentPressure_V = (float)pressureRaw * 0.0001875;
   }
 
   // Read pH
@@ -547,6 +552,7 @@ String getTelemetryJSON() {
   doc["fluo"] = currentFluo;
   doc["ribo"] = currentRibo;
   doc["uv_v"] = currentUV_V;
+  doc["pres_v"] = currentPressure_V;
   doc["timestamp"] = now.timestamp();
   doc["error"] = sensorError;
   String output;

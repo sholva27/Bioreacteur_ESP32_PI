@@ -152,8 +152,8 @@ While the **OPT101** (Photodiode + Integrated Amp) is an excellent choice for it
 
 - **Channel 0**: pH Probe Signal (0-5V scaled if necessary)
 - **Channel 1**: OD Photodiode Signal
-- **Channel 2**: System Voltage Monitor
-- **Channel 3**: Reserved
+- **Channel 2**: Headspace Pressure Signal (XGZP6847A)
+- **Channel 3**: UV Intensity Signal
 
 ## Circuit Notes
 
