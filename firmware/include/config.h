@@ -42,4 +42,16 @@
 #define MQTT_PORT 1883
 #define MQTT_TOPIC_PREFIX "biofermenter/1"
 
+// Debugging & Isolation (Set to 0 to disable a module for probe-by-probe testing)
+#define DEBUG_SERIAL 1      // Main serial output
+#define VERBOSE_ADC 0       // Print raw ADC voltages for every read
+#define USE_ADS1115 1       // Set to 0 if I2C ADC is not connected
+#define USE_RTC 1           // Set to 0 if DS3231 is not connected
+#define USE_PH_PROBE 1
+#define USE_OD_SENSOR 1
+#define USE_TEMP_SENSOR 1
+#define USE_PRESSURE_SENSOR 1
+#define USE_UV_SENSOR 1
+#define USE_ACTUATORS 1     // Set to 0 to disable all pumps/heaters/stirrers for safety
+
 #endif
