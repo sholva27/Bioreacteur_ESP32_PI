@@ -84,6 +84,17 @@ const char index_html[] PROGMEM = R"rawliteral(
     <button onclick="calibratePH(4.0)">Calibrate pH 4.0</button>
     <p>OD (Current Volts: <span id="od-v">--</span>)</p>
     <button onclick="calibrateODZero()">Set OD Blank (Zero)</button>
+    <hr>
+    <h3>Pump Calibration</h3>
+    <select id="cal-pump-select">
+      <option value="acid">Acid Pump</option>
+      <option value="base">Base Pump</option>
+      <option value="nutrient">Nutrient Pump</option>
+    </select>
+    <button onclick="runCalibrationPump()">Run for 60s</button>
+    <br>
+    <label>Measured Vol (mL):</label> <input type="number" id="cal-vol" step="0.1">
+    <button onclick="savePumpCal()">Save Flow Rate</button>
   </div>
 
   <div class="chart-container">
@@ -207,6 +218,21 @@ const char index_html[] PROGMEM = R"rawliteral(
     }, 5000);
 
     function togglePump(pump) { fetch("/pump?type=" + pump); }
+
+    function runCalibrationPump() {
+      var pump = document.getElementById('cal-pump-select').value;
+      fetch("/pump?type=" + pump + "&duration=60000");
+      alert("Pump running for 60 seconds. Collect liquid and measure volume.");
+    }
+
+    function savePumpCal() {
+      var pump = document.getElementById('cal-pump-select').value;
+      var vol = document.getElementById('cal-vol').value;
+      var flowRate = vol / 60.0; // mL/s
+      // This is a logic placeholder, actual storage can be added to settings
+      alert("Flow rate for " + pump + " calculated as " + flowRate.toFixed(4) + " mL/s");
+    }
+
     window.onload = loadSettings;
   </script>
 </body>
