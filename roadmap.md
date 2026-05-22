@@ -20,6 +20,7 @@ Ce document définit les axes de développement pour transformer ce biofermenteu
 *Objectif : Contrôle total sur l'environnement métabolique.*
 
 *   **Contrôle de l'Oxygène Dissous (DO) :** Ajout d'une sonde DO (polarographique ou optique) et asservissement d'une pompe à air ou d'un concentrateur d'O2.
+*   **Thermométrie Sans-Contact (MLX90614) :** Remplacement des sondes immergées par des capteurs infrarouges I2C pour une stérilité absolue.
 *   **Analyse des Gaz de Sortie (Off-gas) :** Montage d'un capteur de CO2 (type NDIR) et O2 sur l'évent du vaisseau pour calculer le **Quotient Respiratoire (RQ)**.
 *   **Expansion des Capteurs de Gaz (Série MQ) :** Intégration de capteurs semi-conducteurs économiques pour détecter des métabolites volatiles spécifiques :
     *   **MQ-3 (Éthanol) :** Pour suivre la fermentation hétérofermentaire (ex: *Lactobacillus brevis*).

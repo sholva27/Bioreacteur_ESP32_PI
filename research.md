@@ -73,16 +73,22 @@ The automated nutrient pump can be programmed for specific feeding profiles:
 ### 6. Metabolic Heat Correlation
 Since the system uses a PWM-controlled heater (MK2Y), the **duty cycle** required to maintain a constant temperature can be correlated with the metabolic heat produced by the culture. This provides an indirect measurement of metabolic activity without additional sensors.
 
-### 7. Co-culture Modeling
+### 7. Non-Contact Infrared Thermometry (MLX90614)
+For advanced sterile bioprocessing, the use of **Non-contact IR sensors** offers several advantages over traditional immersion probes:
+- **Zero Contamination Risk**: The sensor never touches the media, eliminating a major potential entry point for pathogens or undesirable bacteria.
+- **No Fouling**: Biological cultures often form biofilms (bio-fouling) on immersed sensors, causing drift and insulation. IR sensors monitor the vessel wall or surface without being affected by film buildup.
+- **Instant Response**: IR thermometry provides a nearly instantaneous reading of the surface temperature, allowing for tighter control loops than the DS18B20's 750ms conversion time.
+
+### 8. Co-culture Modeling
 Study the interaction between different probiotic strains by monitoring the composite OD curve and fitting it to multi-species competition models (e.g., Lotka-Volterra).
 
-### 8. Metabolic Optimization
+### 9. Metabolic Optimization
 Correlate µ with different feeding strategies and pH levels to find the "sweet spot" for biomass production.
 
-### 9. Lag Phase Analysis
+### 10. Lag Phase Analysis
 Study the effect of inoculum size, age, and media composition on the lag time (`lambda`).
 
-### 10. Harvest Optimization
+### 11. Harvest Optimization
 Use the real-time mu value to trigger harvesting exactly at the transition to the stationary phase for peak bacteriocin yield.
 
 ## Pedagogical Use

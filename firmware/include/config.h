@@ -50,6 +50,7 @@
 #define USE_PH_PROBE 1
 #define USE_OD_SENSOR 1
 #define USE_TEMP_SENSOR 1
+#define USE_MLX90614 0      // Set to 1 if using Non-contact IR temp
 #define USE_PRESSURE_SENSOR 1
 #define USE_UV_SENSOR 1
 #define USE_ACTUATORS 1     // Set to 0 to disable all pumps/heaters/stirrers for safety

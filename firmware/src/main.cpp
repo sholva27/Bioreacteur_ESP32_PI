@@ -328,13 +328,22 @@ void updateSensors() {
 #if USE_TEMP_SENSOR
   // Read Temperature result from previous request
   float temp = sensors.getTempCByIndex(0);
-  if (temp != DEVICE_DISCONNECTED_C) {
+#elif USE_MLX90614
+  // Logic hook for MLX90614 (Adafruit_MLX90614 library)
+  // float temp = mlx.readObjectTempC();
+  float temp = currentTemp; // Placeholder
+#endif
+
+#if USE_TEMP_SENSOR || USE_MLX90614
+  if (temp != DEVICE_DISCONNECTED_C && temp > 0) {
     currentTemp = temp;
   } else {
     sensorError = true;
   }
+  #if USE_TEMP_SENSOR
   // Request temperature for next cycle
   sensors.requestTemperatures();
+  #endif
 #endif
 
 #if USE_ADS1115
