@@ -40,7 +40,20 @@ Many probiotic bacteria (e.g., *Lactobacillus*, *Bifidobacterium*) produce $CO_2
 - **Fermentation Signature**: The "Pressure Curve" often precedes the OD log-phase, providing an early warning of metabolic initiation.
 - **Gas Evolution Rate (GER)**: By calculating $dP/dt$, researchers can estimate the metabolic flux of the culture in real-time, independent of optical turbidity.
 
-### 3. Turbidity vs. OD600
+### 3. Volatile Metabolite Profiling (MQ Sensors)
+The integration of gas sensors (MQ Series) in the headspace or exhaust line allows for real-time monitoring of specific metabolic pathways:
+
+- **Ethanol (MQ-3) - Heterofermentation Tracking**:
+    - Many Lactic Acid Bacteria (LAB) are **homofermentative** (producing only lactic acid), but some are **heterofermentative** (producing lactic acid, CO2, and ethanol).
+    - Monitoring ethanol provides a direct window into the phosphoketolase pathway, allowing researchers to study the metabolic shift under different substrate conditions.
+- **Hydrogen (MQ-8) - Redox Balance**:
+    - Hydrogen production is a sign of efficient disposal of excess reducing equivalents (electrons).
+    - Sudden spikes in H2 can indicate metabolic stress or changes in the redox potential of the media, providing a faster feedback loop than pH or OD.
+- **Ammonia (MQ-137) - Nitrogen Metabolism**:
+    - Ammonia is a byproduct of amino acid deamination.
+    - Rising NH3 levels can signal that the culture has depleted its primary carbohydrate sources and has started metabolizing proteins (peptones/yeast extract), which often correlates with the end of the exponential growth phase.
+
+### 4. Turbidity vs. OD600
 For high-resolution growth tracking, understanding the difference between Transmission and Scattering is vital:
 - **OD600 (Transmission)**: Measures the amount of light that *fails* to pass through the culture. It is highly accurate for low to medium densities but "saturates" (flattens out) when the culture becomes too thick for light to penetrate.
 - **Turbidity (Scattering/Nephelometry)**: Measures the light that is *scattered* at an angle (usually 90°). This method is often superior for high-density probiotic cultures as it remains linear over a wider range of biomass concentrations.

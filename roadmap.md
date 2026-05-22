@@ -21,6 +21,11 @@ Ce document définit les axes de développement pour transformer ce biofermenteu
 
 *   **Contrôle de l'Oxygène Dissous (DO) :** Ajout d'une sonde DO (polarographique ou optique) et asservissement d'une pompe à air ou d'un concentrateur d'O2.
 *   **Analyse des Gaz de Sortie (Off-gas) :** Montage d'un capteur de CO2 (type NDIR) et O2 sur l'évent du vaisseau pour calculer le **Quotient Respiratoire (RQ)**.
+*   **Expansion des Capteurs de Gaz (Série MQ) :** Intégration de capteurs semi-conducteurs économiques pour détecter des métabolites volatiles spécifiques :
+    *   **MQ-3 (Éthanol) :** Pour suivre la fermentation hétérofermentaire (ex: *Lactobacillus brevis*).
+    *   **MQ-8 (Hydrogène) :** Indicateur de métabolisme énergétique et de stress chez certaines souches.
+    *   **MQ-135 (CO2 / Qualité d'air) :** Alternative économique pour estimer l'activité métabolique globale.
+    *   **MQ-137 (Ammoniac) :** Pour surveiller le métabolisme des protéines et la dégradation des acides aminés.
 *   **Stérilisation In-Situ (SIP) :** Ajout de résistances de chauffe haute puissance pour permettre une stérilisation à la vapeur ou thermique du vaisseau vide avant inoculation.
 
 ## 🟡 Niveau 4 : Expérience Utilisateur (UX)
