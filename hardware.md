@@ -94,6 +94,7 @@ Maintaining a stable temperature is critical for probiotic growth. While the **D
 | Sensor | Type | Pros | Cons |
 |--------|------|------|------|
 | **DS18B20** | Digital (OneWire) | Waterproof versions common, No ADC needed, Multi-drop | Slower response time (~750ms for 12-bit) |
+| **MLX90614** | IR Non-contact (I2C) | No risk of contamination, easy to clean, no fouling | Measures surface temp; sensitive to emissivity/steam |
 | **PT100/PT1000** | RTD (Analog) | Extremely precise, industry standard | Requires a specialized amplifier (e.g., MAX31865) |
 | **NTC Thermistor** | Analog (Resistor) | Fast response, extremely cheap | Non-linear, requires calibration and voltage divider |
 | **BME280 / SHT3x** | Digital (I2C) | Very high accuracy for air temp/humidity | Not naturally waterproof; hard to use in liquids |
