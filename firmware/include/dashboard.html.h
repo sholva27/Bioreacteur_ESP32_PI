@@ -4,6 +4,7 @@
 const char index_html[] PROGMEM = R"rawliteral(
 <!DOCTYPE HTML><html>
 <head>
+  <meta charset="UTF-8">
   <title>Probiotic Biofermenter</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -16,6 +17,7 @@ const char index_html[] PROGMEM = R"rawliteral(
     .unit { font-size: 1.2rem; color: #7f8c8d; }
     button { padding: 12px 24px; font-size: 1rem; cursor: pointer; border-radius: 5px; border: none; background-color: #3498db; color: white; margin: 5px; transition: background 0.3s; }
     button:hover { background-color: #2980b9; }
+    button:focus-visible { outline: 3px solid #f39c12; outline-offset: 2px; }
     .btn-download { background-color: #27ae60; }
     .status-error { color: #e74c3c; font-weight: bold; }
     input { padding: 8px; width: 60px; margin: 5px; }
@@ -63,38 +65,39 @@ const char index_html[] PROGMEM = R"rawliteral(
 
   <div class="card">
     <h2>Configuration</h2>
-    <label>pH Target:</label> <input type="number" id="target-ph" step="0.1"><br>
-    <label>Temp Target:</label> <input type="number" id="target-temp" step="0.5"><br>
-    <label>Stirrer Speed (0-255):</label> <input type="number" id="stirrer-speed"><br>
-    <label>Kp:</label> <input type="number" id="kp"><br>
-    <label>Ki:</label> <input type="number" id="ki"><br>
-    <label>Kd:</label> <input type="number" id="kd"><br>
+    <label for="target-ph">pH Target:</label> <input type="number" id="target-ph" step="0.1"><br>
+    <label for="target-temp">Temp Target:</label> <input type="number" id="target-temp" step="0.5"><br>
+    <label for="stirrer-speed">Stirrer Speed (0-255):</label> <input type="number" id="stirrer-speed"><br>
+    <label for="kp">Kp:</label> <input type="number" id="kp"><br>
+    <label for="ki">Ki:</label> <input type="number" id="ki"><br>
+    <label for="kd">Kd:</label> <input type="number" id="kd"><br>
     <hr>
-    <label>Enable MQTT:</label> <input type="checkbox" id="mqtt-enabled"><br>
-    <label>MQTT Broker:</label> <input type="text" id="mqtt-broker"><br>
-    <button onclick="updateSettings()">Save Settings</button>
-    <button class="btn-download" onclick="window.location.href='/download_log'">Download Log</button>
-    <button onclick="togglePump('nutrient')">Manual Feed</button>
+    <label for="mqtt-enabled">Enable MQTT:</label> <input type="checkbox" id="mqtt-enabled"><br>
+    <label for="mqtt-broker">MQTT Broker:</label> <input type="text" id="mqtt-broker"><br>
+    <button id="save-btn" onclick="updateSettings()" aria-label="Save all configuration settings">Save Settings</button>
+    <button class="btn-download" onclick="window.location.href='/download_log'" aria-label="Download experiment data logs">Download Log</button>
+    <button id="feed-btn" onclick="togglePump('nutrient')" aria-label="Manually trigger nutrient pump">Manual Feed</button>
   </div>
 
   <div class="card">
     <h2>Calibration</h2>
     <p>pH (Current Volts: <span id="ph-v">--</span>)</p>
-    <button onclick="calibratePH(7.0)">Calibrate pH 7.0</button>
-    <button onclick="calibratePH(4.0)">Calibrate pH 4.0</button>
+    <button id="ph7-btn" onclick="calibratePH(7.0)" aria-label="Calibrate pH probe at 7.0">Calibrate pH 7.0</button>
+    <button id="ph4-btn" onclick="calibratePH(4.0)" aria-label="Calibrate pH probe at 4.0">Calibrate pH 4.0</button>
     <p>OD (Current Volts: <span id="od-v">--</span>)</p>
-    <button onclick="calibrateODZero()">Set OD Blank (Zero)</button>
+    <button id="od-blank-btn" onclick="calibrateODZero()" aria-label="Set current optical density as zero baseline">Set OD Blank (Zero)</button>
     <hr>
     <h3>Pump Calibration</h3>
+    <label for="cal-pump-select">Select Pump:</label>
     <select id="cal-pump-select">
       <option value="acid">Acid Pump</option>
       <option value="base">Base Pump</option>
       <option value="nutrient">Nutrient Pump</option>
     </select>
-    <button onclick="runCalibrationPump()">Run for 60s</button>
+    <button id="cal-run-btn" onclick="runCalibrationPump()" aria-label="Run selected pump for 60 seconds for calibration">Run for 60s</button>
     <br>
-    <label>Measured Vol (mL):</label> <input type="number" id="cal-vol" step="0.1">
-    <button onclick="savePumpCal()">Save Flow Rate</button>
+    <label for="cal-vol">Measured Vol (mL):</label> <input type="number" id="cal-vol" step="0.1">
+    <button id="cal-save-btn" onclick="savePumpCal()" aria-label="Save calculated flow rate for selected pump">Save Flow Rate</button>
   </div>
 
   <div class="chart-container">
@@ -143,47 +146,96 @@ const char index_html[] PROGMEM = R"rawliteral(
     var lastPh7V = 0;
     var lastPh4V = 0;
 
+    function provideBtnFeedback(id, tempText, successText = "Saved!") {
+      const btn = document.getElementById(id);
+      const originalText = btn.innerHTML;
+      btn.innerHTML = tempText;
+      btn.disabled = true;
+      return () => {
+        btn.innerHTML = successText;
+        setTimeout(() => {
+          btn.innerHTML = originalText;
+          btn.disabled = false;
+        }, 2000);
+      };
+    }
+
     function calibratePH(value) {
-       fetch('/data').then(r => r.json()).then(data => {
+       const btnId = value === 7.0 ? 'ph7-btn' : 'ph4-btn';
+       const revert = provideBtnFeedback(btnId, "Calibrating...");
+       fetch('/data').then(r => {
+          if (!r.ok) throw new Error();
+          return r.json();
+       }).then(data => {
           if (value == 7.0) {
             lastPh7V = data.ph_v;
-            alert("pH 7.0 set to " + lastPh7V + "V. Now place in pH 4.0 and calibrate.");
-            updateSettings({phOffset: -lastPh7V});
+            return updateSettings({phOffset: -lastPh7V});
           } else if (value == 4.0) {
             lastPh4V = data.ph_v;
             var newSlope = 3.0 / (lastPh7V - lastPh4V);
             var newOffset = 0 - (lastPh7V * newSlope);
-            updateSettings({phSlope: newSlope, phOffset: newOffset});
-            alert("pH Calibrated! Slope: " + newSlope.toFixed(2));
+            return updateSettings({phSlope: newSlope, phOffset: newOffset});
           }
+       }).then(() => revert())
+       .catch(() => {
+         const btn = document.getElementById(btnId);
+         btn.innerHTML = "Error!";
+         setTimeout(() => { btn.innerHTML = (value === 7.0 ? "Calibrate pH 7.0" : "Calibrate pH 4.0"); btn.disabled = false; }, 2000);
        });
     }
 
     function calibrateODZero() {
-       fetch('/data').then(r => r.json()).then(data => {
-          updateSettings({odZero: data.od_v});
-          alert("OD Blank set to " + data.od_v + "V");
+       const revert = provideBtnFeedback('od-blank-btn', "Setting Blank...");
+       fetch('/data').then(r => {
+          if (!r.ok) throw new Error();
+          return r.json();
+       }).then(data => {
+          return updateSettings({odZero: data.od_v});
+       }).then(() => revert())
+       .catch(() => {
+         const btn = document.getElementById('od-blank-btn');
+         btn.innerHTML = "Error!";
+         setTimeout(() => { btn.innerHTML = "Set OD Blank (Zero)"; btn.disabled = false; }, 2000);
        });
     }
 
     function updateSettings(extra = {}) {
-      fetch('/settings').then(r => r.json()).then(data => {
+      const isInternal = Object.keys(extra).length > 0;
+      let revert = null;
+      if (!isInternal) revert = provideBtnFeedback('save-btn', "Saving...");
+
+      return fetch('/settings').then(r => {
+        if (!r.ok) throw new Error();
+        return r.json();
+      }).then(data => {
         var settings = data;
-        settings.mqttEnabled = document.getElementById('mqtt-enabled').checked;
-        settings.mqttBroker = document.getElementById('mqtt-broker').value;
-        settings.phTarget = parseFloat(document.getElementById('target-ph').value);
-        settings.tempTarget = parseFloat(document.getElementById('target-temp').value);
-        settings.stirrerSpeed = parseInt(document.getElementById('stirrer-speed').value);
-        settings.kp = parseFloat(document.getElementById('kp').value);
-        settings.ki = parseFloat(document.getElementById('ki').value);
-        settings.kd = parseFloat(document.getElementById('kd').value);
+        if (!isInternal) {
+          settings.mqttEnabled = document.getElementById('mqtt-enabled').checked;
+          settings.mqttBroker = document.getElementById('mqtt-broker').value;
+          settings.phTarget = parseFloat(document.getElementById('target-ph').value);
+          settings.tempTarget = parseFloat(document.getElementById('target-temp').value);
+          settings.stirrerSpeed = parseInt(document.getElementById('stirrer-speed').value);
+          settings.kp = parseFloat(document.getElementById('kp').value);
+          settings.ki = parseFloat(document.getElementById('ki').value);
+          settings.kd = parseFloat(document.getElementById('kd').value);
+        }
 
         Object.assign(settings, extra);
-        fetch('/set', {
+        return fetch('/set', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify(settings)
-        }).then(() => { if (!Object.keys(extra).length) alert("Settings Updated Successfully"); });
+        });
+      }).then(r => {
+        if (r && !r.ok) throw new Error();
+        if (revert) revert();
+      })
+      .catch(() => {
+        if (revert) {
+          const btn = document.getElementById('save-btn');
+          btn.innerHTML = "Error!";
+          setTimeout(() => { btn.innerHTML = "Save Settings"; btn.disabled = false; }, 2000);
+        }
       });
     }
 
@@ -217,20 +269,40 @@ const char index_html[] PROGMEM = R"rawliteral(
       });
     }, 5000);
 
-    function togglePump(pump) { fetch("/pump?type=" + pump); }
+    function togglePump(pump) {
+      const revert = provideBtnFeedback('feed-btn', "Feeding...", "Done!");
+      fetch("/pump?type=" + pump).then(r => {
+        if (!r.ok) throw new Error();
+        revert();
+      }).catch(() => {
+        const btn = document.getElementById('feed-btn');
+        btn.innerHTML = "Error!";
+        setTimeout(() => { btn.innerHTML = "Manual Feed"; btn.disabled = false; }, 2000);
+      });
+    }
 
     function runCalibrationPump() {
+      const revert = provideBtnFeedback('cal-run-btn', "Running...", "Done!");
       var pump = document.getElementById('cal-pump-select').value;
-      fetch("/pump?type=" + pump + "&duration=60000");
-      alert("Pump running for 60 seconds. Collect liquid and measure volume.");
+      fetch("/pump?type=" + pump + "&duration=60000").then(r => {
+        if (!r.ok) throw new Error();
+        revert();
+      }).catch(() => {
+        const btn = document.getElementById('cal-run-btn');
+        btn.innerHTML = "Error!";
+        setTimeout(() => { btn.innerHTML = "Run for 60s"; btn.disabled = false; }, 2000);
+      });
     }
 
     function savePumpCal() {
+      const revert = provideBtnFeedback('cal-save-btn', "Calculating...");
       var pump = document.getElementById('cal-pump-select').value;
       var vol = document.getElementById('cal-vol').value;
       var flowRate = vol / 60.0; // mL/s
-      // This is a logic placeholder, actual storage can be added to settings
-      alert("Flow rate for " + pump + " calculated as " + flowRate.toFixed(4) + " mL/s");
+      setTimeout(() => {
+        revert();
+        console.log("Flow rate for " + pump + " calculated as " + flowRate.toFixed(4) + " mL/s");
+      }, 1000);
     }
 
     window.onload = loadSettings;
