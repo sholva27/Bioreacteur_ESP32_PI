@@ -1,0 +1,3 @@
+## 2024-05-26 - [Embedded UI: Asynchronous Feedback & Encoding]
+**Learning:** In embedded web dashboards (ESP32), providing non-blocking asynchronous feedback (e.g., 'Saving...' -> 'Saved!') is critical to replace disruptive 'alert()' calls and improve the perceived responsiveness of the hardware control loop. Additionally, scientific symbols like '°C' and 'μ' require an explicit '<meta charset="UTF-8">' tag to render correctly in all browsers when served from raw string literals in C++.
+**Action:** Always implement a centralized 'provideBtnFeedback' helper for async operations and ensure UTF-8 encoding is specified in the HTML head.
