@@ -16,6 +16,8 @@ const char index_html[] PROGMEM = R"rawliteral(
     .unit { font-size: 1.2rem; color: #7f8c8d; }
     button { padding: 12px 24px; font-size: 1rem; cursor: pointer; border-radius: 5px; border: none; background-color: #3498db; color: white; margin: 5px; transition: background 0.3s; }
     button:hover { background-color: #2980b9; }
+    button:focus-visible { outline: 3px solid #f39c12; outline-offset: 2px; }
+    button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
     .btn-download { background-color: #27ae60; }
     .status-error { color: #e74c3c; font-weight: bold; }
     input { padding: 8px; width: 60px; margin: 5px; }
@@ -23,7 +25,7 @@ const char index_html[] PROGMEM = R"rawliteral(
 </head>
 <body>
   <h1>Probiotic Biofermenter Dashboard</h1>
-  <div id="error-msg" class="status-error" style="display:none;">SENSOR ERROR DETECTED - SYSTEM IN FAILSAFE</div>
+  <div id="error-msg" class="status-error" role="alert" aria-live="assertive" style="display:none;">SENSOR ERROR DETECTED - SYSTEM IN FAILSAFE</div>
 
   <div class="card">
     <h2>pH Level</h2>
@@ -72,7 +74,7 @@ const char index_html[] PROGMEM = R"rawliteral(
     <hr>
     <label>Enable MQTT:</label> <input type="checkbox" id="mqtt-enabled"><br>
     <label>MQTT Broker:</label> <input type="text" id="mqtt-broker"><br>
-    <button onclick="updateSettings()">Save Settings</button>
+    <button id="save-btn" onclick="updateSettings()" aria-label="Save all settings">Save Settings</button>
     <button class="btn-download" onclick="window.location.href='/download_log'">Download Log</button>
     <button onclick="togglePump('nutrient')">Manual Feed</button>
   </div>
@@ -102,6 +104,17 @@ const char index_html[] PROGMEM = R"rawliteral(
   </div>
 
   <script>
+    function provideBtnFeedback(btnId, loadingText, successText) {
+      const btn = document.getElementById(btnId);
+      const originalText = btn.innerHTML;
+      btn.innerHTML = loadingText;
+      btn.disabled = true;
+      return (success = true) => {
+        btn.innerHTML = success ? successText : "Error!";
+        setTimeout(() => { btn.innerHTML = originalText; btn.disabled = false; }, 2000);
+      };
+    }
+
     var ctx = document.getElementById('bioChart').getContext('2d');
     var chart = new Chart(ctx, {
         type: 'line',
@@ -167,6 +180,8 @@ const char index_html[] PROGMEM = R"rawliteral(
     }
 
     function updateSettings(extra = {}) {
+      const isManual = !Object.keys(extra).length;
+      let done = isManual ? provideBtnFeedback('save-btn', 'Saving...', 'Saved!') : null;
       fetch('/settings').then(r => r.json()).then(data => {
         var settings = data;
         settings.mqttEnabled = document.getElementById('mqtt-enabled').checked;
@@ -179,12 +194,12 @@ const char index_html[] PROGMEM = R"rawliteral(
         settings.kd = parseFloat(document.getElementById('kd').value);
 
         Object.assign(settings, extra);
-        fetch('/set', {
+        return fetch('/set', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify(settings)
-        }).then(() => { if (!Object.keys(extra).length) alert("Settings Updated Successfully"); });
-      });
+        });
+      }).then(() => done && done(true)).catch(() => done && done(false));
     }
 
     setInterval(function ( ) {
