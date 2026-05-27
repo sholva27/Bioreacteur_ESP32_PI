@@ -1,0 +1,3 @@
+## 2026-05-27 - Preservation of Instructional Alerts in Hardware UX
+**Learning:** While replacing JavaScript `alert()` with inline button feedback is generally preferred for a modern UX, multi-step hardware procedures (like pH probe calibration) require explicit instructional guidance between physical actions. Moving purely to button-state feedback can leave users stranded if they don't know the physical next step.
+**Action:** Always verify if an `alert()` contains critical instructional workflow data before replacing it with a simple "Success" state. For multi-step hardware tasks, keep instructions or implement a proper modal/wizard.
