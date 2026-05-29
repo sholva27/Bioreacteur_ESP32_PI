@@ -5,10 +5,11 @@ const char index_html[] PROGMEM = R"rawliteral(
 <!DOCTYPE HTML><html>
 <head>
   <title>Probiotic Biofermenter</title>
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    body { font-family: Arial; text-align: center; margin:0px auto; padding-top: 30px; background-color: #f4f7f6; }
+    body { font-family: Arial, sans-serif; text-align: center; margin:0px auto; padding-top: 30px; background-color: #f4f7f6; }
     .card { background-color: white; box-shadow: 2px 2px 12px 1px rgba(140,140,140,.5); padding: 20px; width: 300px; display: inline-block; margin: 10px; border-radius: 10px; vertical-align: top;}
     .chart-container { width: 80%; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 2px 2px 12px 1px rgba(140,140,140,.5); margin-top: 20px;}
     h2 { color: #003366; }
@@ -16,9 +17,13 @@ const char index_html[] PROGMEM = R"rawliteral(
     .unit { font-size: 1.2rem; color: #7f8c8d; }
     button { padding: 12px 24px; font-size: 1rem; cursor: pointer; border-radius: 5px; border: none; background-color: #3498db; color: white; margin: 5px; transition: background 0.3s; }
     button:hover { background-color: #2980b9; }
+    button:focus-visible { outline: 3px solid #f39c12; outline-offset: 2px; }
+    button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
     .btn-download { background-color: #27ae60; }
     .status-error { color: #e74c3c; font-weight: bold; }
     input { padding: 8px; width: 60px; margin: 5px; }
+    input:focus-visible { outline: 3px solid #f39c12; outline-offset: 2px; }
+    label { cursor: pointer; }
   </style>
 </head>
 <body>
@@ -63,38 +68,39 @@ const char index_html[] PROGMEM = R"rawliteral(
 
   <div class="card">
     <h2>Configuration</h2>
-    <label>pH Target:</label> <input type="number" id="target-ph" step="0.1"><br>
-    <label>Temp Target:</label> <input type="number" id="target-temp" step="0.5"><br>
-    <label>Stirrer Speed (0-255):</label> <input type="number" id="stirrer-speed"><br>
-    <label>Kp:</label> <input type="number" id="kp"><br>
-    <label>Ki:</label> <input type="number" id="ki"><br>
-    <label>Kd:</label> <input type="number" id="kd"><br>
+    <label for="target-ph">pH Target:</label> <input type="number" id="target-ph" step="0.1"><br>
+    <label for="target-temp">Temp Target:</label> <input type="number" id="target-temp" step="0.5"><br>
+    <label for="stirrer-speed">Stirrer Speed (0-255):</label> <input type="number" id="stirrer-speed"><br>
+    <label for="kp">Kp:</label> <input type="number" id="kp"><br>
+    <label for="ki">Ki:</label> <input type="number" id="ki"><br>
+    <label for="kd">Kd:</label> <input type="number" id="kd"><br>
     <hr>
-    <label>Enable MQTT:</label> <input type="checkbox" id="mqtt-enabled"><br>
-    <label>MQTT Broker:</label> <input type="text" id="mqtt-broker"><br>
-    <button onclick="updateSettings()">Save Settings</button>
-    <button class="btn-download" onclick="window.location.href='/download_log'">Download Log</button>
-    <button onclick="togglePump('nutrient')">Manual Feed</button>
+    <label for="mqtt-enabled">Enable MQTT:</label> <input type="checkbox" id="mqtt-enabled"><br>
+    <label for="mqtt-broker">MQTT Broker:</label> <input type="text" id="mqtt-broker"><br>
+    <button id="save-btn" onclick="updateSettings()" aria-label="Save all configuration settings">Save Settings</button>
+    <button class="btn-download" onclick="window.location.href='/download_log'" aria-label="Download historical data log as CSV">Download Log</button>
+    <button id="feed-btn" onclick="togglePump('nutrient')" aria-label="Manually trigger nutrient pump">Manual Feed</button>
   </div>
 
   <div class="card">
     <h2>Calibration</h2>
     <p>pH (Current Volts: <span id="ph-v">--</span>)</p>
-    <button onclick="calibratePH(7.0)">Calibrate pH 7.0</button>
-    <button onclick="calibratePH(4.0)">Calibrate pH 4.0</button>
+    <button id="ph7-btn" onclick="calibratePH(7.0)" aria-label="Calibrate pH sensor at 7.0 reference">Calibrate pH 7.0</button>
+    <button id="ph4-btn" onclick="calibratePH(4.0)" aria-label="Calibrate pH sensor at 4.0 reference">Calibrate pH 4.0</button>
     <p>OD (Current Volts: <span id="od-v">--</span>)</p>
-    <button onclick="calibrateODZero()">Set OD Blank (Zero)</button>
+    <button id="od-btn" onclick="calibrateODZero()" aria-label="Zero the optical density sensor with a blank sample">Set OD Blank (Zero)</button>
     <hr>
     <h3>Pump Calibration</h3>
+    <label for="cal-pump-select">Select Pump:</label>
     <select id="cal-pump-select">
       <option value="acid">Acid Pump</option>
       <option value="base">Base Pump</option>
       <option value="nutrient">Nutrient Pump</option>
     </select>
-    <button onclick="runCalibrationPump()">Run for 60s</button>
+    <button id="cal-run-btn" onclick="runCalibrationPump()" aria-label="Run selected pump for 60 seconds for calibration">Run for 60s</button>
     <br>
-    <label>Measured Vol (mL):</label> <input type="number" id="cal-vol" step="0.1">
-    <button onclick="savePumpCal()">Save Flow Rate</button>
+    <label for="cal-vol">Measured Vol (mL):</label> <input type="number" id="cal-vol" step="0.1">
+    <button id="cal-save-btn" onclick="savePumpCal()" aria-label="Save the calculated flow rate">Save Flow Rate</button>
   </div>
 
   <div class="chart-container">
@@ -166,7 +172,25 @@ const char index_html[] PROGMEM = R"rawliteral(
        });
     }
 
+    function provideBtnFeedback(btnId, temporaryText) {
+      const btn = document.getElementById(btnId);
+      const originalText = btn.innerHTML;
+      btn.innerHTML = temporaryText;
+      btn.disabled = true;
+      setTimeout(() => {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+      }, 2000);
+    }
+
     function updateSettings(extra = {}) {
+      const isManualSave = !Object.keys(extra).length;
+      if (isManualSave) {
+        const btn = document.getElementById('save-btn');
+        btn.innerHTML = "Saving...";
+        btn.disabled = true;
+      }
+
       fetch('/settings').then(r => r.json()).then(data => {
         var settings = data;
         settings.mqttEnabled = document.getElementById('mqtt-enabled').checked;
@@ -183,7 +207,15 @@ const char index_html[] PROGMEM = R"rawliteral(
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify(settings)
-        }).then(() => { if (!Object.keys(extra).length) alert("Settings Updated Successfully"); });
+        }).then(() => {
+          if (isManualSave) provideBtnFeedback('save-btn', 'Saved!');
+        }).catch(err => {
+          if (isManualSave) {
+            const btn = document.getElementById('save-btn');
+            btn.innerHTML = "Save Settings";
+            btn.disabled = false;
+          }
+        });
       });
     }
 
@@ -217,7 +249,10 @@ const char index_html[] PROGMEM = R"rawliteral(
       });
     }, 5000);
 
-    function togglePump(pump) { fetch("/pump?type=" + pump); }
+    function togglePump(pump) {
+      if (pump === 'nutrient') provideBtnFeedback('feed-btn', 'Feeding...');
+      fetch("/pump?type=" + pump);
+    }
 
     function runCalibrationPump() {
       var pump = document.getElementById('cal-pump-select').value;
