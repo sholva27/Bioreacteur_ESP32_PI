@@ -1,0 +1,3 @@
+## 2025-05-15 - Decoupling Manual Save from Background API Updates
+**Learning:** In embedded dashboards, sharing a single 'updateSettings' function for both manual form submissions and programmatic background updates (like calibration offsets) can lead to unintended side effects, such as accidentally committing unsaved form changes during calibration.
+**Action:** Use a flag or check for arguments in the update function to distinguish between 'manual' saves (which read from the DOM) and 'extra' updates (which only apply specific patches), ensuring the UI feedback (e.g., 'Saving...') is only triggered for user-initiated actions.
