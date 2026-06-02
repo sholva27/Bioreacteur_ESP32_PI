@@ -1,0 +1,3 @@
+## 2026-06-02 - [Embedded UI Accessibility & Feedback]
+**Learning:** In C++/Arduino projects with embedded web dashboards (stored as raw strings), standard linting and formatting tools are often unavailable. Manual verification and custom mock servers for Playwright testing are essential to ensure accessibility (aria-live, role="alert") and interactive feedback (async button states) work correctly without corrupting C++ syntax.
+**Action:** Always extract HTML from headers for verification and use a Python-based mock server to simulate hardware endpoints (/data, /settings, /pump) during frontend testing.
