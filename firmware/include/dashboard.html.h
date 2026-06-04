@@ -16,6 +16,8 @@ const char index_html[] PROGMEM = R"rawliteral(
     .unit { font-size: 1.2rem; color: #7f8c8d; }
     button { padding: 12px 24px; font-size: 1rem; cursor: pointer; border-radius: 5px; border: none; background-color: #3498db; color: white; margin: 5px; transition: background 0.3s; }
     button:hover { background-color: #2980b9; }
+    button:focus-visible { outline: 3px solid #f39c12; outline-offset: 2px; }
+    button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
     .btn-download { background-color: #27ae60; }
     .status-error { color: #e74c3c; font-weight: bold; }
     input { padding: 8px; width: 60px; margin: 5px; }
@@ -63,18 +65,18 @@ const char index_html[] PROGMEM = R"rawliteral(
 
   <div class="card">
     <h2>Configuration</h2>
-    <label>pH Target:</label> <input type="number" id="target-ph" step="0.1"><br>
-    <label>Temp Target:</label> <input type="number" id="target-temp" step="0.5"><br>
-    <label>Stirrer Speed (0-255):</label> <input type="number" id="stirrer-speed"><br>
-    <label>Kp:</label> <input type="number" id="kp"><br>
-    <label>Ki:</label> <input type="number" id="ki"><br>
-    <label>Kd:</label> <input type="number" id="kd"><br>
+    <label for="target-ph">pH Target:</label> <input type="number" id="target-ph" step="0.1"><br>
+    <label for="target-temp">Temp Target:</label> <input type="number" id="target-temp" step="0.5"><br>
+    <label for="stirrer-speed">Stirrer Speed (0-255):</label> <input type="number" id="stirrer-speed"><br>
+    <label for="kp">Kp:</label> <input type="number" id="kp"><br>
+    <label for="ki">Ki:</label> <input type="number" id="ki"><br>
+    <label for="kd">Kd:</label> <input type="number" id="kd"><br>
     <hr>
-    <label>Enable MQTT:</label> <input type="checkbox" id="mqtt-enabled"><br>
-    <label>MQTT Broker:</label> <input type="text" id="mqtt-broker"><br>
-    <button onclick="updateSettings()">Save Settings</button>
+    <label for="mqtt-enabled">Enable MQTT:</label> <input type="checkbox" id="mqtt-enabled"><br>
+    <label for="mqtt-broker">MQTT Broker:</label> <input type="text" id="mqtt-broker"><br>
+    <button id="save-btn" aria-label="Save all configuration settings" onclick="updateSettings()">Save Settings</button>
     <button class="btn-download" onclick="window.location.href='/download_log'">Download Log</button>
-    <button onclick="togglePump('nutrient')">Manual Feed</button>
+    <button id="feed-btn" onclick="togglePump('nutrient')">Manual Feed</button>
   </div>
 
   <div class="card">
@@ -167,24 +169,20 @@ const char index_html[] PROGMEM = R"rawliteral(
     }
 
     function updateSettings(extra = {}) {
+      const fb = !Object.keys(extra).length ? provideBtnFeedback('save-btn', 'Saving...', 'Saved!') : null;
       fetch('/settings').then(r => r.json()).then(data => {
-        var settings = data;
-        settings.mqttEnabled = document.getElementById('mqtt-enabled').checked;
-        settings.mqttBroker = document.getElementById('mqtt-broker').value;
-        settings.phTarget = parseFloat(document.getElementById('target-ph').value);
-        settings.tempTarget = parseFloat(document.getElementById('target-temp').value);
-        settings.stirrerSpeed = parseInt(document.getElementById('stirrer-speed').value);
-        settings.kp = parseFloat(document.getElementById('kp').value);
-        settings.ki = parseFloat(document.getElementById('ki').value);
-        settings.kd = parseFloat(document.getElementById('kd').value);
-
-        Object.assign(settings, extra);
-        fetch('/set', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify(settings)
-        }).then(() => { if (!Object.keys(extra).length) alert("Settings Updated Successfully"); });
-      });
+        var s = data;
+        s.mqttEnabled = document.getElementById('mqtt-enabled').checked;
+        s.mqttBroker = document.getElementById('mqtt-broker').value;
+        s.phTarget = parseFloat(document.getElementById('target-ph').value);
+        s.tempTarget = parseFloat(document.getElementById('target-temp').value);
+        s.stirrerSpeed = parseInt(document.getElementById('stirrer-speed').value);
+        s.kp = parseFloat(document.getElementById('kp').value);
+        s.ki = parseFloat(document.getElementById('ki').value);
+        s.kd = parseFloat(document.getElementById('kd').value);
+        Object.assign(s, extra);
+        return fetch('/set', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(s) });
+      }).then(r => fb && fb(r.ok)).catch(() => fb && fb(false));
     }
 
     setInterval(function ( ) {
@@ -217,7 +215,19 @@ const char index_html[] PROGMEM = R"rawliteral(
       });
     }, 5000);
 
-    function togglePump(pump) { fetch("/pump?type=" + pump); }
+    function togglePump(p) {
+      const fb = (p === 'nutrient') ? provideBtnFeedback('feed-btn', 'Feeding...', 'Fed!') : null;
+      fetch("/pump?type=" + p).then(r => fb && fb(r.ok)).catch(() => fb && fb(false));
+    }
+
+    function provideBtnFeedback(id, loadText, okText) {
+      const b = document.getElementById(id); if (!b) return () => {};
+      const orig = b.innerHTML; b.innerHTML = loadText; b.disabled = true;
+      return (ok = true) => {
+        b.innerHTML = ok ? okText : orig;
+        setTimeout(() => { b.innerHTML = orig; b.disabled = false; }, 2000);
+      };
+    }
 
     function runCalibrationPump() {
       var pump = document.getElementById('cal-pump-select').value;
