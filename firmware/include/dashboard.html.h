@@ -2,8 +2,9 @@
 #define DASHBOARD_HTML_H
 
 const char index_html[] PROGMEM = R"rawliteral(
-<!DOCTYPE HTML><html>
+<!DOCTYPE HTML><html lang="en">
 <head>
+  <meta charset="UTF-8">
   <title>Probiotic Biofermenter</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -23,7 +24,7 @@ const char index_html[] PROGMEM = R"rawliteral(
 </head>
 <body>
   <h1>Probiotic Biofermenter Dashboard</h1>
-  <div id="error-msg" class="status-error" style="display:none;">SENSOR ERROR DETECTED - SYSTEM IN FAILSAFE</div>
+  <div id="error-msg" class="status-error" style="display:none;" role="alert" aria-live="assertive">SENSOR ERROR DETECTED - SYSTEM IN FAILSAFE</div>
 
   <div class="card">
     <h2>pH Level</h2>
@@ -63,38 +64,39 @@ const char index_html[] PROGMEM = R"rawliteral(
 
   <div class="card">
     <h2>Configuration</h2>
-    <label>pH Target:</label> <input type="number" id="target-ph" step="0.1"><br>
-    <label>Temp Target:</label> <input type="number" id="target-temp" step="0.5"><br>
-    <label>Stirrer Speed (0-255):</label> <input type="number" id="stirrer-speed"><br>
-    <label>Kp:</label> <input type="number" id="kp"><br>
-    <label>Ki:</label> <input type="number" id="ki"><br>
-    <label>Kd:</label> <input type="number" id="kd"><br>
+    <label for="target-ph">pH Target:</label> <input type="number" id="target-ph" step="0.1"><br>
+    <label for="target-temp">Temp Target:</label> <input type="number" id="target-temp" step="0.5"><br>
+    <label for="stirrer-speed">Stirrer Speed (0-255):</label> <input type="number" id="stirrer-speed"><br>
+    <label for="kp">Kp:</label> <input type="number" id="kp"><br>
+    <label for="ki">Ki:</label> <input type="number" id="ki"><br>
+    <label for="kd">Kd:</label> <input type="number" id="kd"><br>
     <hr>
-    <label>Enable MQTT:</label> <input type="checkbox" id="mqtt-enabled"><br>
-    <label>MQTT Broker:</label> <input type="text" id="mqtt-broker"><br>
-    <button onclick="updateSettings()">Save Settings</button>
-    <button class="btn-download" onclick="window.location.href='/download_log'">Download Log</button>
-    <button onclick="togglePump('nutrient')">Manual Feed</button>
+    <label for="mqtt-enabled">Enable MQTT:</label> <input type="checkbox" id="mqtt-enabled"><br>
+    <label for="mqtt-broker">MQTT Broker:</label> <input type="text" id="mqtt-broker"><br>
+    <button id="save-btn" onclick="updateSettings()">Save Settings</button>
+    <button class="btn-download" onclick="window.location.href='/download_log'" aria-label="Download Log File">Download Log</button>
+    <button onclick="togglePump('nutrient')" aria-label="Manual Feed Nutrient">Manual Feed</button>
   </div>
 
   <div class="card">
     <h2>Calibration</h2>
     <p>pH (Current Volts: <span id="ph-v">--</span>)</p>
-    <button onclick="calibratePH(7.0)">Calibrate pH 7.0</button>
-    <button onclick="calibratePH(4.0)">Calibrate pH 4.0</button>
+    <button onclick="calibratePH(7.0)" aria-label="Calibrate pH 7.0">Calibrate pH 7.0</button>
+    <button onclick="calibratePH(4.0)" aria-label="Calibrate pH 4.0">Calibrate pH 4.0</button>
     <p>OD (Current Volts: <span id="od-v">--</span>)</p>
-    <button onclick="calibrateODZero()">Set OD Blank (Zero)</button>
+    <button onclick="calibrateODZero()" aria-label="Set Optical Density Blank">Set OD Blank (Zero)</button>
     <hr>
     <h3>Pump Calibration</h3>
+    <label for="cal-pump-select">Select Pump:</label>
     <select id="cal-pump-select">
       <option value="acid">Acid Pump</option>
       <option value="base">Base Pump</option>
       <option value="nutrient">Nutrient Pump</option>
     </select>
-    <button onclick="runCalibrationPump()">Run for 60s</button>
+    <button onclick="runCalibrationPump()" aria-label="Run selected pump for calibration">Run for 60s</button>
     <br>
-    <label>Measured Vol (mL):</label> <input type="number" id="cal-vol" step="0.1">
-    <button onclick="savePumpCal()">Save Flow Rate</button>
+    <label for="cal-vol">Measured Vol (mL):</label> <input type="number" id="cal-vol" step="0.1">
+    <button onclick="savePumpCal()" aria-label="Save Flow Rate Calibration">Save Flow Rate</button>
   </div>
 
   <div class="chart-container">
@@ -126,6 +128,26 @@ const char index_html[] PROGMEM = R"rawliteral(
             }
         }
     });
+
+    function provideBtnFeedback(btnId, loadingText, successText) {
+      const btn = document.getElementById(btnId);
+      if (!btn) return;
+      const originalText = btn.innerHTML;
+      btn.innerHTML = loadingText;
+      btn.disabled = true;
+      btn.style.backgroundColor = '#bdc3c7';
+      btn.style.cursor = 'not-allowed';
+
+      return () => {
+        btn.innerHTML = successText;
+        setTimeout(() => {
+          btn.innerHTML = originalText;
+          btn.disabled = false;
+          btn.style.backgroundColor = '';
+          btn.style.cursor = '';
+        }, 2000);
+      };
+    }
 
     function loadSettings() {
       fetch('/settings').then(r => r.json()).then(data => {
@@ -167,7 +189,13 @@ const char index_html[] PROGMEM = R"rawliteral(
     }
 
     function updateSettings(extra = {}) {
-      fetch('/settings').then(r => r.json()).then(data => {
+      const isManualSave = !Object.keys(extra).length;
+      let resolveFeedback;
+      if (isManualSave) {
+        resolveFeedback = provideBtnFeedback('save-btn', 'Saving...', 'Saved!');
+      }
+
+      return fetch('/settings').then(r => r.json()).then(data => {
         var settings = data;
         settings.mqttEnabled = document.getElementById('mqtt-enabled').checked;
         settings.mqttBroker = document.getElementById('mqtt-broker').value;
@@ -179,11 +207,22 @@ const char index_html[] PROGMEM = R"rawliteral(
         settings.kd = parseFloat(document.getElementById('kd').value);
 
         Object.assign(settings, extra);
-        fetch('/set', {
+        return fetch('/set', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify(settings)
-        }).then(() => { if (!Object.keys(extra).length) alert("Settings Updated Successfully"); });
+        }).then(() => {
+          if (resolveFeedback) resolveFeedback();
+        }).catch(err => {
+          if (isManualSave) {
+            const btn = document.getElementById('save-btn');
+            btn.innerHTML = 'Save Settings';
+            btn.disabled = false;
+            btn.style.backgroundColor = '';
+            btn.style.cursor = '';
+          }
+          throw err;
+        });
       });
     }
 
