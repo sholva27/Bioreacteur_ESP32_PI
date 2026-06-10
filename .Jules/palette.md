@@ -1,0 +1,3 @@
+## 2026-06-10 - [Asynchronous UI Feedback and State Leakage]
+**Learning:** When adding asynchronous feedback to shared utility functions (like `updateSettings`), ensure that the feedback is correctly targeted to the triggering element to avoid UI state "leakage" where unrelated buttons show progress indicators. Also, be careful with optional parameters in JavaScript to avoid passing unexpected types (like strings when objects are expected) which can pollute data payloads.
+**Action:** Use explicit element IDs and validate optional arguments in shared async helpers to ensure isolated and correct UI state transitions.
