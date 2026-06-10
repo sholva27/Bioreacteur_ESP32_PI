@@ -23,7 +23,7 @@ const char index_html[] PROGMEM = R"rawliteral(
 </head>
 <body>
   <h1>Probiotic Biofermenter Dashboard</h1>
-  <div id="error-msg" class="status-error" style="display:none;">SENSOR ERROR DETECTED - SYSTEM IN FAILSAFE</div>
+  <div id="error-msg" class="status-error" style="display:none;" role="alert" aria-live="assertive">SENSOR ERROR DETECTED - SYSTEM IN FAILSAFE</div>
 
   <div class="card">
     <h2>pH Level</h2>
@@ -63,18 +63,18 @@ const char index_html[] PROGMEM = R"rawliteral(
 
   <div class="card">
     <h2>Configuration</h2>
-    <label>pH Target:</label> <input type="number" id="target-ph" step="0.1"><br>
-    <label>Temp Target:</label> <input type="number" id="target-temp" step="0.5"><br>
-    <label>Stirrer Speed (0-255):</label> <input type="number" id="stirrer-speed"><br>
-    <label>Kp:</label> <input type="number" id="kp"><br>
-    <label>Ki:</label> <input type="number" id="ki"><br>
-    <label>Kd:</label> <input type="number" id="kd"><br>
+    <label for="target-ph">pH Target:</label> <input type="number" id="target-ph" step="0.1"><br>
+    <label for="target-temp">Temp Target:</label> <input type="number" id="target-temp" step="0.5"><br>
+    <label for="stirrer-speed">Stirrer Speed:</label> <input type="number" id="stirrer-speed"><br>
+    <label for="kp">Kp:</label> <input type="number" id="kp"><br>
+    <label for="ki">Ki:</label> <input type="number" id="ki"><br>
+    <label for="kd">Kd:</label> <input type="number" id="kd"><br>
     <hr>
-    <label>Enable MQTT:</label> <input type="checkbox" id="mqtt-enabled"><br>
-    <label>MQTT Broker:</label> <input type="text" id="mqtt-broker"><br>
-    <button onclick="updateSettings()">Save Settings</button>
-    <button class="btn-download" onclick="window.location.href='/download_log'">Download Log</button>
-    <button onclick="togglePump('nutrient')">Manual Feed</button>
+    <label for="mqtt-enabled">Enable MQTT:</label> <input type="checkbox" id="mqtt-enabled"><br>
+    <label for="mqtt-broker">MQTT Broker:</label> <input type="text" id="mqtt-broker"><br>
+    <button id="save-btn" onclick="updateSettings({}, 'save-btn')">Save Settings</button>
+    <button class="btn-download" aria-label="Download Data Log" onclick="window.location.href='/download_log'">Download Log</button>
+    <button id="feed-btn" onclick="togglePump('nutrient', 'feed-btn')">Manual Feed</button>
   </div>
 
   <div class="card">
@@ -166,25 +166,20 @@ const char index_html[] PROGMEM = R"rawliteral(
        });
     }
 
-    function updateSettings(extra = {}) {
+    function updateSettings(extra = {}, btnId = 'save-btn') {
+      const b = btnId ? document.getElementById(btnId) : null; if (b) { b.disabled = true; b.innerHTML = 'Saving...'; }
       fetch('/settings').then(r => r.json()).then(data => {
-        var settings = data;
-        settings.mqttEnabled = document.getElementById('mqtt-enabled').checked;
-        settings.mqttBroker = document.getElementById('mqtt-broker').value;
-        settings.phTarget = parseFloat(document.getElementById('target-ph').value);
-        settings.tempTarget = parseFloat(document.getElementById('target-temp').value);
-        settings.stirrerSpeed = parseInt(document.getElementById('stirrer-speed').value);
-        settings.kp = parseFloat(document.getElementById('kp').value);
-        settings.ki = parseFloat(document.getElementById('ki').value);
-        settings.kd = parseFloat(document.getElementById('kd').value);
-
-        Object.assign(settings, extra);
-        fetch('/set', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify(settings)
-        }).then(() => { if (!Object.keys(extra).length) alert("Settings Updated Successfully"); });
-      });
+        var s = Object.assign(data, extra);
+        s.mqttEnabled = document.getElementById('mqtt-enabled').checked;
+        s.mqttBroker = document.getElementById('mqtt-broker').value;
+        s.phTarget = parseFloat(document.getElementById('target-ph').value);
+        s.tempTarget = parseFloat(document.getElementById('target-temp').value);
+        s.stirrerSpeed = parseInt(document.getElementById('stirrer-speed').value);
+        s.kp = parseFloat(document.getElementById('kp').value);
+        s.ki = parseFloat(document.getElementById('ki').value);
+        s.kd = parseFloat(document.getElementById('kd').value);
+        return fetch('/set', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(s) });
+      }).then(() => { if (b) { b.innerHTML = 'Saved!'; setTimeout(() => { b.disabled = false; b.innerHTML = 'Save Settings'; }, 2000); } }).catch(() => { if (b) { b.disabled = false; b.innerHTML = 'Save Settings'; } });
     }
 
     setInterval(function ( ) {
@@ -217,7 +212,10 @@ const char index_html[] PROGMEM = R"rawliteral(
       });
     }, 5000);
 
-    function togglePump(pump) { fetch("/pump?type=" + pump); }
+    function togglePump(p, btnId) {
+      const b = document.getElementById(btnId); if (b) { b.disabled = true; b.innerHTML = 'Feeding...'; }
+      fetch("/pump?type=" + p).then(() => { if (b) { b.innerHTML = 'Fed!'; setTimeout(() => { b.disabled = false; b.innerHTML = 'Manual Feed'; }, 2000); } }).catch(() => { if (b) { b.disabled = false; b.innerHTML = 'Manual Feed'; } });
+    }
 
     function runCalibrationPump() {
       var pump = document.getElementById('cal-pump-select').value;
