@@ -1,0 +1,3 @@
+## 2026-06-12 - [Improved Interactive Feedback & Accessibility]
+**Learning:** Asynchronous hardware operations in embedded dashboards (like pump triggers or setting saves) benefit significantly from localized button feedback ('Saving...', 'Feeding...') rather than global alerts. This maintains context and provides a smoother user experience. Explicit label-to-input association using 'for' and 'id' is critical for accessibility in dense configuration forms.
+**Action:** Use the 'provideBtnFeedback' pattern for all asynchronous hardware-linked interactions to avoid disruptive alerts and ensure screen readers can correctly identify form controls.
