@@ -1,0 +1,3 @@
+## 2024-06-16 - Non-blocking Feedback & Label Association
+**Learning:** In embedded firmware dashboards, blocking `alert()` calls disrupt the monitoring flow. Asynchronous feedback (e.g., 'Saving...' -> 'Saved!') on the triggering button provides a smoother experience without losing the user's context. Additionally, explicit `id`/`for` association is critical for both accessibility and improving the hit area of small inputs in a dense configuration UI.
+**Action:** Always implement a `provideBtnFeedback` helper for async operations and ensure all `<label>` tags are explicitly associated with their respective inputs.
