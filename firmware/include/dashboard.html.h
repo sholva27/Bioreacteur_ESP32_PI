@@ -19,6 +19,7 @@ const char index_html[] PROGMEM = R"rawliteral(
     .btn-download { background-color: #27ae60; }
     .status-error { color: #e74c3c; font-weight: bold; }
     input { padding: 8px; width: 60px; margin: 5px; }
+    button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
   </style>
 </head>
 <body>
@@ -72,9 +73,9 @@ const char index_html[] PROGMEM = R"rawliteral(
     <hr>
     <label>Enable MQTT:</label> <input type="checkbox" id="mqtt-enabled"><br>
     <label>MQTT Broker:</label> <input type="text" id="mqtt-broker"><br>
-    <button onclick="updateSettings()">Save Settings</button>
+    <button id="save-btn" onclick="updateSettings()">Save Settings</button>
     <button class="btn-download" onclick="window.location.href='/download_log'">Download Log</button>
-    <button onclick="togglePump('nutrient')">Manual Feed</button>
+    <button id="feed-btn" onclick="togglePump('nutrient')">Manual Feed</button>
   </div>
 
   <div class="card">
@@ -167,6 +168,8 @@ const char index_html[] PROGMEM = R"rawliteral(
     }
 
     function updateSettings(extra = {}) {
+      const isManualSave = !Object.keys(extra).length;
+      const resolveFeedback = isManualSave ? provideBtnFeedback('save-btn', 'Saving...') : null;
       fetch('/settings').then(r => r.json()).then(data => {
         var settings = data;
         settings.mqttEnabled = document.getElementById('mqtt-enabled').checked;
@@ -183,7 +186,7 @@ const char index_html[] PROGMEM = R"rawliteral(
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify(settings)
-        }).then(() => { if (!Object.keys(extra).length) alert("Settings Updated Successfully"); });
+        }).then(() => { if (resolveFeedback) resolveFeedback(); });
       });
     }
 
@@ -217,7 +220,10 @@ const char index_html[] PROGMEM = R"rawliteral(
       });
     }, 5000);
 
-    function togglePump(pump) { fetch("/pump?type=" + pump); }
+    function togglePump(pump) {
+      const resolveFeedback = pump === 'nutrient' ? provideBtnFeedback('feed-btn', 'Feeding...', 'Fed!') : null;
+      fetch("/pump?type=" + pump).then(() => { if (resolveFeedback) resolveFeedback(); });
+    }
 
     function runCalibrationPump() {
       var pump = document.getElementById('cal-pump-select').value;
@@ -231,6 +237,21 @@ const char index_html[] PROGMEM = R"rawliteral(
       var flowRate = vol / 60.0; // mL/s
       // This is a logic placeholder, actual storage can be added to settings
       alert("Flow rate for " + pump + " calculated as " + flowRate.toFixed(4) + " mL/s");
+    }
+
+    function provideBtnFeedback(btnId, feedbackText, successText = 'Saved!') {
+      const btn = document.getElementById(btnId);
+      if (!btn) return;
+      const originalText = btn.innerText;
+      btn.innerText = feedbackText;
+      btn.disabled = true;
+      return () => {
+        btn.innerText = successText;
+        setTimeout(() => {
+          btn.innerText = originalText;
+          btn.disabled = false;
+        }, 2000);
+      };
     }
 
     window.onload = loadSettings;
