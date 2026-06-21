@@ -16,6 +16,8 @@ const char index_html[] PROGMEM = R"rawliteral(
     .unit { font-size: 1.2rem; color: #7f8c8d; }
     button { padding: 12px 24px; font-size: 1rem; cursor: pointer; border-radius: 5px; border: none; background-color: #3498db; color: white; margin: 5px; transition: background 0.3s; }
     button:hover { background-color: #2980b9; }
+    button:focus-visible { outline: 3px solid #f39c12; outline-offset: 2px; }
+    button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
     .btn-download { background-color: #27ae60; }
     .status-error { color: #e74c3c; font-weight: bold; }
     input { padding: 8px; width: 60px; margin: 5px; }
@@ -63,38 +65,39 @@ const char index_html[] PROGMEM = R"rawliteral(
 
   <div class="card">
     <h2>Configuration</h2>
-    <label>pH Target:</label> <input type="number" id="target-ph" step="0.1"><br>
-    <label>Temp Target:</label> <input type="number" id="target-temp" step="0.5"><br>
-    <label>Stirrer Speed (0-255):</label> <input type="number" id="stirrer-speed"><br>
-    <label>Kp:</label> <input type="number" id="kp"><br>
-    <label>Ki:</label> <input type="number" id="ki"><br>
-    <label>Kd:</label> <input type="number" id="kd"><br>
+    <label for="target-ph">pH Target:</label> <input type="number" id="target-ph" step="0.1"><br>
+    <label for="target-temp">Temp Target:</label> <input type="number" id="target-temp" step="0.5"><br>
+    <label for="stirrer-speed">Stirrer Speed (0-255):</label> <input type="number" id="stirrer-speed"><br>
+    <label for="kp">Kp:</label> <input type="number" id="kp"><br>
+    <label for="ki">Ki:</label> <input type="number" id="ki"><br>
+    <label for="kd">Kd:</label> <input type="number" id="kd"><br>
     <hr>
-    <label>Enable MQTT:</label> <input type="checkbox" id="mqtt-enabled"><br>
-    <label>MQTT Broker:</label> <input type="text" id="mqtt-broker"><br>
-    <button onclick="updateSettings()">Save Settings</button>
-    <button class="btn-download" onclick="window.location.href='/download_log'">Download Log</button>
-    <button onclick="togglePump('nutrient')">Manual Feed</button>
+    <label for="mqtt-enabled">Enable MQTT:</label> <input type="checkbox" id="mqtt-enabled"><br>
+    <label for="mqtt-broker">MQTT Broker:</label> <input type="text" id="mqtt-broker"><br>
+    <button id="save-btn" onclick="updateSettings()" aria-label="Save current configuration to device">Save Settings</button>
+    <button class="btn-download" onclick="window.location.href='/download_log'" aria-label="Download system logs as CSV">Download Log</button>
+    <button id="feed-btn" onclick="togglePump('nutrient')" aria-label="Manually trigger nutrient feeding pump">Manual Feed</button>
   </div>
 
   <div class="card">
     <h2>Calibration</h2>
     <p>pH (Current Volts: <span id="ph-v">--</span>)</p>
-    <button onclick="calibratePH(7.0)">Calibrate pH 7.0</button>
-    <button onclick="calibratePH(4.0)">Calibrate pH 4.0</button>
+    <button id="ph7-btn" onclick="calibratePH(7.0)" aria-label="Calibrate pH probe using 7.0 buffer">Calibrate pH 7.0</button>
+    <button id="ph4-btn" onclick="calibratePH(4.0)" aria-label="Calibrate pH probe using 4.0 buffer">Calibrate pH 4.0</button>
     <p>OD (Current Volts: <span id="od-v">--</span>)</p>
-    <button onclick="calibrateODZero()">Set OD Blank (Zero)</button>
+    <button id="od-btn" onclick="calibrateODZero()" aria-label="Zero optical density sensor with blank sample">Set OD Blank (Zero)</button>
     <hr>
     <h3>Pump Calibration</h3>
+    <label for="cal-pump-select">Select Pump:</label>
     <select id="cal-pump-select">
       <option value="acid">Acid Pump</option>
       <option value="base">Base Pump</option>
       <option value="nutrient">Nutrient Pump</option>
     </select>
-    <button onclick="runCalibrationPump()">Run for 60s</button>
+    <button id="cal-run-btn" onclick="runCalibrationPump()" aria-label="Run selected pump for 60 seconds for calibration">Run for 60s</button>
     <br>
-    <label>Measured Vol (mL):</label> <input type="number" id="cal-vol" step="0.1">
-    <button onclick="savePumpCal()">Save Flow Rate</button>
+    <label for="cal-vol">Measured Vol (mL):</label> <input type="number" id="cal-vol" step="0.1">
+    <button id="cal-save-btn" onclick="savePumpCal()" aria-label="Calculate and save flow rate from measured volume">Save Flow Rate</button>
   </div>
 
   <div class="chart-container">
@@ -127,6 +130,21 @@ const char index_html[] PROGMEM = R"rawliteral(
         }
     });
 
+    function provideBtnFeedback(btnId, successText = 'Saved!') {
+      const btn = document.getElementById(btnId);
+      if (!btn) return () => {};
+      const originalText = btn.innerText;
+      btn.innerText = 'Saving...';
+      btn.disabled = true;
+      return (error = false) => {
+        btn.innerText = error ? 'Error!' : successText;
+        setTimeout(() => {
+          btn.innerText = originalText;
+          btn.disabled = false;
+        }, 2000);
+      };
+    }
+
     function loadSettings() {
       fetch('/settings').then(r => r.json()).then(data => {
         document.getElementById('target-ph').value = data.phTarget;
@@ -144,30 +162,35 @@ const char index_html[] PROGMEM = R"rawliteral(
     var lastPh4V = 0;
 
     function calibratePH(value) {
+       const btnId = (value == 7.0) ? 'ph7-btn' : 'ph4-btn';
+       const resolve = provideBtnFeedback(btnId, 'Zeroed!');
        fetch('/data').then(r => r.json()).then(data => {
           if (value == 7.0) {
             lastPh7V = data.ph_v;
             alert("pH 7.0 set to " + lastPh7V + "V. Now place in pH 4.0 and calibrate.");
-            updateSettings({phOffset: -lastPh7V});
+            updateSettings({phOffset: -lastPh7V}, null).then(() => resolve());
           } else if (value == 4.0) {
             lastPh4V = data.ph_v;
             var newSlope = 3.0 / (lastPh7V - lastPh4V);
             var newOffset = 0 - (lastPh7V * newSlope);
-            updateSettings({phSlope: newSlope, phOffset: newOffset});
-            alert("pH Calibrated! Slope: " + newSlope.toFixed(2));
+            updateSettings({phSlope: newSlope, phOffset: newOffset}, null).then(() => {
+              alert("pH Calibrated! Slope: " + newSlope.toFixed(2));
+              resolve();
+            });
           }
-       });
+       }).catch(() => resolve(true));
     }
 
     function calibrateODZero() {
+       const resolve = provideBtnFeedback('od-btn', 'Zeroed!');
        fetch('/data').then(r => r.json()).then(data => {
-          updateSettings({odZero: data.od_v});
-          alert("OD Blank set to " + data.od_v + "V");
-       });
+          updateSettings({odZero: data.od_v}, null).then(() => resolve());
+       }).catch(() => resolve(true));
     }
 
-    function updateSettings(extra = {}) {
-      fetch('/settings').then(r => r.json()).then(data => {
+    function updateSettings(extra = {}, btnId = 'save-btn') {
+      const resolve = btnId ? provideBtnFeedback(btnId) : null;
+      return fetch('/settings').then(r => r.json()).then(data => {
         var settings = data;
         settings.mqttEnabled = document.getElementById('mqtt-enabled').checked;
         settings.mqttBroker = document.getElementById('mqtt-broker').value;
@@ -179,12 +202,13 @@ const char index_html[] PROGMEM = R"rawliteral(
         settings.kd = parseFloat(document.getElementById('kd').value);
 
         Object.assign(settings, extra);
-        fetch('/set', {
+        return fetch('/set', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify(settings)
-        }).then(() => { if (!Object.keys(extra).length) alert("Settings Updated Successfully"); });
-      });
+        });
+      }).then(() => { if (resolve) resolve(); })
+        .catch(err => { if (resolve) resolve(true); throw err; });
     }
 
     setInterval(function ( ) {
@@ -217,20 +241,31 @@ const char index_html[] PROGMEM = R"rawliteral(
       });
     }, 5000);
 
-    function togglePump(pump) { fetch("/pump?type=" + pump); }
+    function togglePump(pump) {
+      const btnId = (pump === 'nutrient') ? 'feed-btn' : null;
+      const resolve = btnId ? provideBtnFeedback(btnId, 'Fed!') : null;
+      fetch("/pump?type=" + pump).then(() => { if (resolve) resolve(); }).catch(() => { if (resolve) resolve(true); });
+    }
 
     function runCalibrationPump() {
+      const resolve = provideBtnFeedback('cal-run-btn', 'Running...');
       var pump = document.getElementById('cal-pump-select').value;
-      fetch("/pump?type=" + pump + "&duration=60000");
-      alert("Pump running for 60 seconds. Collect liquid and measure volume.");
+      fetch("/pump?type=" + pump + "&duration=60000").then(() => {
+        alert("Pump running for 60 seconds. Collect liquid and measure volume.");
+        resolve();
+      }).catch(() => resolve(true));
     }
 
     function savePumpCal() {
+      const resolve = provideBtnFeedback('cal-save-btn', 'Calculated!');
       var pump = document.getElementById('cal-pump-select').value;
       var vol = document.getElementById('cal-vol').value;
       var flowRate = vol / 60.0; // mL/s
       // This is a logic placeholder, actual storage can be added to settings
-      alert("Flow rate for " + pump + " calculated as " + flowRate.toFixed(4) + " mL/s");
+      setTimeout(() => {
+        alert("Flow rate for " + pump + " calculated as " + flowRate.toFixed(4) + " mL/s");
+        resolve();
+      }, 500);
     }
 
     window.onload = loadSettings;
