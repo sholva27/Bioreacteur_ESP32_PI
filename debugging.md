@@ -24,8 +24,8 @@ Avant de brancher les sondes, vérifiez que le bus de communication est sain.
     #define VERBOSE_ADC 1
     ```
 2.  Observez `PH_V` dans le moniteur série.
-3.  **Test à vide** : Court-circuitez le centre du connecteur BNC avec l'extérieur. La tension doit se stabiliser vers ~2.5V (soit pH 7.0 théorique).
-4.  **Test avec sonde** : Plongez la sonde dans une solution tampon pH 7.0. Notez la tension. Répétez pour pH 4.0.
+3.  **Test à vide** : Court-circuitez le centre du connecteur BNC avec l'extérieur. La tension doit se stabiliser vers ~2.5V (soit pH 7.0 théorique avec les paramètres par défaut `PH_VMID 2.5`).
+4.  **Test avec sonde** : Plongez la sonde dans une solution tampon pH 7.0. Notez la tension (idéalement ~2.5V). Répétez pour pH 4.0 (idéalement ~2.677V car la tension augmente quand le pH diminue sur la plupart des modules).
 
 ## Étape 3 : Test de l'Optical Density (OD)
 1.  Activez l'OD dans `config.h` :

@@ -2,8 +2,9 @@
 #define DASHBOARD_HTML_H
 
 const char index_html[] PROGMEM = R"rawliteral(
-<!DOCTYPE HTML><html>
+<!DOCTYPE HTML><html lang="en">
 <head>
+  <meta charset="UTF-8">
   <title>Probiotic Biofermenter</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -140,21 +141,37 @@ const char index_html[] PROGMEM = R"rawliteral(
       });
     }
 
-    var lastPh7V = 0;
-    var lastPh4V = 0;
+    var lastPh7V = 2.5; // Default VMID
 
     function calibratePH(value) {
        fetch('/data').then(r => r.json()).then(data => {
           if (value == 7.0) {
             lastPh7V = data.ph_v;
-            alert("pH 7.0 set to " + lastPh7V + "V. Now place in pH 4.0 and calibrate.");
-            updateSettings({phOffset: -lastPh7V});
+            // phOffset is a shift in pH units. If V=lastPh7V should be pH 7.0,
+            // and the formula is pH = 7.0 + (PH_VMID - V)/Slope_V + phOffset,
+            // we can set phOffset to compensate for the difference.
+            // Simplified: we want (PH_VMID - lastPh7V)/Slope_V + phOffset = 0
+            // So phOffset = (lastPh7V - PH_VMID) / Slope_V
+            // But usually we just store the 2 points and compute slope and offset.
+            // For P0, let's keep it simple and store a custom offset and slope-multiplier.
+            updateSettings({phOffset: 0.0, phSlope: 1.0}); // Reset to defaults first
+            alert("pH 7.0 calibrated at " + lastPh7V + "V. Now place in pH 4.0 and calibrate.");
           } else if (value == 4.0) {
-            lastPh4V = data.ph_v;
-            var newSlope = 3.0 / (lastPh7V - lastPh4V);
-            var newOffset = 0 - (lastPh7V * newSlope);
-            updateSettings({phSlope: newSlope, phOffset: newOffset});
-            alert("pH Calibrated! Slope: " + newSlope.toFixed(2));
+            let lastPh4V = data.ph_v;
+            // Target: pH = 7.0 + (PH_VMID - V) / ((PH_SLOPE_MV/1000) * phSlope) + phOffset
+            // Using 2 points (V7, 7.0) and (V4, 4.0):
+            // 7.0 = 7.0 + (PH_VMID - V7) / SlopeV + Offset
+            // 4.0 = 7.0 + (PH_VMID - V4) / SlopeV + Offset
+            // Subtracting: 3.0 = (V4 - V7) / SlopeV  => SlopeV = (V4 - V7) / 3.0
+            // Then Offset = (V7 - PH_VMID) / SlopeV
+
+            let idealSlopeV = 59.16 / 1000.0;
+            let actualSlopeV = (lastPh4V - lastPh7V) / 3.0;
+            let newPhSlope = actualSlopeV / idealSlopeV;
+            let newPhOffset = (lastPh7V - 2.5) / actualSlopeV; // 2.5 is PH_VMID
+
+            updateSettings({phSlope: newPhSlope, phOffset: newPhOffset});
+            alert("pH Calibrated! Multiplier: " + newPhSlope.toFixed(2) + ", Offset: " + newPhOffset.toFixed(2));
           }
        });
     }
@@ -217,11 +234,11 @@ const char index_html[] PROGMEM = R"rawliteral(
       });
     }, 5000);
 
-    function togglePump(pump) { fetch("/pump?type=" + pump); }
+    function togglePump(pump) { fetch("/pump", {method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: 'type=' + pump}); }
 
     function runCalibrationPump() {
       var pump = document.getElementById('cal-pump-select').value;
-      fetch("/pump?type=" + pump + "&duration=60000");
+      fetch("/pump", {method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: 'type=' + pump + '&duration=60000'});
       alert("Pump running for 60 seconds. Collect liquid and measure volume.");
     }
 
