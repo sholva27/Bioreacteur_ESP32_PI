@@ -432,32 +432,30 @@ void updateSensors() {
     if (VERBOSE_ADC) Serial.printf("PH_V: %.4fV -> PH: %.2f\n", currentPH_V, currentPH);
     #endif
 
+    #if USE_OD_SENSOR
+    // Read OD
+    digitalWrite(OD_LIGHT_PIN, HIGH);
+    delayMicroseconds(500);
+    int16_t odRaw = ads.readADC_SingleEnded(ADS_OD_CH);
+    digitalWrite(OD_LIGHT_PIN, LOW);
+
+    // OD Calculation with guard
+    currentOD_V = (float)odRaw * 0.0001875;
+    if (VERBOSE_ADC) Serial.printf("OD_V: %.4fV (%d)\n", currentOD_V, odRaw);
+    if (currentOD_V > 0.001) {
+      if (odZeroVoltage > 0.1) {
+        currentOD = log10(odZeroVoltage / currentOD_V) * OD_CALIBRATION_FACTOR;
+      } else {
+        currentOD = 0.0;
+      }
+    } else {
+      currentOD = 4.0; // Max out at high density
+    }
+    #endif
+
   } else {
     sensorError = true;
   }
-#endif
-
-#if USE_ADS1115
-  #if USE_OD_SENSOR
-  // Read OD
-  digitalWrite(OD_LIGHT_PIN, HIGH);
-  delayMicroseconds(500);
-  int16_t odRaw = ads.readADC_SingleEnded(ADS_OD_CH);
-  digitalWrite(OD_LIGHT_PIN, LOW);
-
-  // OD Calculation with guard
-  currentOD_V = (float)odRaw * 0.0001875;
-  if (VERBOSE_ADC) Serial.printf("OD_V: %.4fV\n", currentOD_V);
-  if (currentOD_V > 0.001) {
-    if (odZeroVoltage > 0.1) {
-      currentOD = log10(odZeroVoltage / currentOD_V) * OD_CALIBRATION_FACTOR;
-    } else {
-      currentOD = 0.0;
-    }
-  } else {
-    currentOD = 4.0; // Max out at high density
-  }
-  #endif
 #endif
 
   // Growth Rate Estimation (Specific Growth Rate mu)
