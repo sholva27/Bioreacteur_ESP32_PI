@@ -59,8 +59,43 @@ unsigned long lastLogTime = 0;
 unsigned long lastFluoRead = 0;
 
 // Pump states (for non-blocking duration)
-bool nutrientPumpActive = false;
-unsigned long nutrientPumpStartTime = 0;
+struct PumpState {
+  int pin;
+  bool active;
+  unsigned long startTime;
+  unsigned long duration;
+};
+
+PumpState acidPump = {PUMP_ACID_PIN, false, 0, 0};
+PumpState basePump = {PUMP_BASE_PIN, false, 0, 0};
+PumpState nutrientPump = {PUMP_NUTRIENT_PIN, false, 0, 0};
+
+void startPump(PumpState &p, unsigned long duration) {
+  if (duration > PUMP_MAX_MS) duration = PUMP_MAX_MS;
+  p.duration = duration;
+  p.startTime = millis();
+  p.active = true;
+  // Note: digitalWrite happens in updatePumps() to ensure single actuation authority
+}
+
+void updatePumps() {
+  unsigned long now = millis();
+  PumpState* pumps[] = {&acidPump, &basePump, &nutrientPump};
+  for (int i = 0; i < 3; i++) {
+    if (pumps[i]->active) {
+      if (now - pumps[i]->startTime >= pumps[i]->duration) {
+        digitalWrite(pumps[i]->pin, LOW);
+        pumps[i]->active = false;
+      } else {
+        digitalWrite(pumps[i]->pin, HIGH);
+      }
+    } else {
+      // Ensure pin is LOW if not active, but respect other control logic (e.g. PID)
+      // Actually, for single authority, we should probably merge PID into this or
+      // have PID only set the PumpState.
+    }
+  }
+}
 
 // PID constants for pH control
 float Kp = 100.0, Ki = 0.0, Kd = 0.0;
@@ -103,6 +138,8 @@ void setup() {
   if (!ads.begin()) {
     Serial.println("Failed to initialize ADS1115.");
     sensorError = true;
+  } else {
+    Serial.println("ADS1115 Initialized.");
   }
 #endif
 
@@ -131,14 +168,20 @@ void setup() {
   pinMode(STATUS_LED, OUTPUT);
   emergencyStop(); // Ensure all pumps off at start
 
-  // WiFi Setup
+  // WiFi Setup (Non-blocking attempt)
+  Serial.println("Connecting to WiFi...");
   WiFi.begin(WIFI_SSID, WIFI_PASS);
-  while (WiFi.status() != WL_CONNECTED) {
+  unsigned long startAttemptTime = millis();
+  while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < 15000) {
     delay(500);
     Serial.print(".");
   }
-  Serial.println("\nWiFi connected.");
-  Serial.println(WiFi.localIP());
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("\nWiFi connected.");
+    Serial.println(WiFi.localIP());
+  } else {
+    Serial.println("\nWiFi connection failed (timeout). Running in offline mode.");
+  }
 
   // Web Server Routes
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
@@ -150,42 +193,29 @@ void setup() {
   });
 
   server.on("/download_log", HTTP_GET, [](AsyncWebServerRequest *request){
+    if(!request->authenticate(WEB_USER, WEB_PASS)) return request->requestAuthentication();
     request->send(SPIFFS, "/log.csv", "text/csv", true);
   });
 
-  server.on("/pump", HTTP_GET, [](AsyncWebServerRequest *request){
-    if(request->hasParam("type")) {
-      String type = request->getParam("type")->value();
+  server.on("/pump", HTTP_POST, [](AsyncWebServerRequest *request){
+    if(!request->authenticate(WEB_USER, WEB_PASS)) return request->requestAuthentication();
+    if(request->hasParam("type", true)) {
+      String type = request->getParam("type", true)->value();
       long duration = FEEDING_DURATION_MS;
-      if(request->hasParam("duration")) {
-        duration = request->getParam("duration")->value().toInt();
+      if(request->hasParam("duration", true)) {
+        duration = request->getParam("duration", true)->value().toInt();
       }
 
-      int pin = -1;
-      if(type == "nutrient") pin = PUMP_NUTRIENT_PIN;
-      else if(type == "acid") pin = PUMP_ACID_PIN;
-      else if(type == "base") pin = PUMP_BASE_PIN;
-
-      if(pin != -1) {
-        digitalWrite(pin, HIGH);
-        // Using a Lambda with a timer for specific durations
-        // Note: For simplicity in this skeleton, we handle only nutrient in the main loop
-        // but this logic can be extended for all pumps.
-        if (type == "nutrient") {
-          nutrientPumpActive = true;
-          nutrientPumpStartTime = millis();
-        } else {
-          // Manual/Calibration override for other pumps
-          delay(duration > 5000 ? 5000 : duration); // Safety cap for sync delay
-          digitalWrite(pin, LOW);
-        }
-      }
+      if(type == "nutrient") startPump(nutrientPump, duration);
+      else if(type == "acid") startPump(acidPump, duration);
+      else if(type == "base") startPump(basePump, duration);
     }
     request->send(200, "text/plain", "OK");
   });
 
   server.on("/settings", HTTP_GET, [](AsyncWebServerRequest *request){
-    StaticJsonDocument<1024> doc;
+    if(!request->authenticate(WEB_USER, WEB_PASS)) return request->requestAuthentication();
+    JsonDocument doc;
     doc["phTarget"] = phTarget;
     doc["phHysteresis"] = phHysteresis;
     doc["tempTarget"] = tempTarget;
@@ -204,22 +234,25 @@ void setup() {
     request->send(200, "application/json", output);
   });
 
-  server.on("/set", HTTP_POST, [](AsyncWebServerRequest *request){}, NULL, [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total){
-    StaticJsonDocument<1024> doc;
-    deserializeJson(doc, (const char*)data);
-    if(doc.containsKey("phTarget")) phTarget = doc["phTarget"];
-    if(doc.containsKey("phHysteresis")) phHysteresis = doc["phHysteresis"];
-    if(doc.containsKey("tempTarget")) tempTarget = doc["tempTarget"];
-    if(doc.containsKey("stirrerSpeed")) stirrerSpeed = doc["stirrerSpeed"];
-    if(doc.containsKey("feedingInterval")) feedingInterval = doc["feedingInterval"];
-    if(doc.containsKey("kp")) Kp = doc["kp"];
-    if(doc.containsKey("ki")) Ki = doc["ki"];
-    if(doc.containsKey("kd")) Kd = doc["kd"];
-    if(doc.containsKey("mqttBroker")) mqttBroker = doc["mqttBroker"].as<String>();
-    if(doc.containsKey("mqttEnabled")) mqttEnabled = doc["mqttEnabled"];
-    if(doc.containsKey("phOffset")) phOffset = doc["phOffset"];
-    if(doc.containsKey("phSlope")) phSlope = doc["phSlope"];
-    if(doc.containsKey("odZero")) odZeroVoltage = doc["odZero"];
+  server.on("/set", HTTP_POST, [](AsyncWebServerRequest *request){
+    if(!request->authenticate(WEB_USER, WEB_PASS)) return request->requestAuthentication();
+  }, NULL, [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total){
+    if(!request->authenticate(WEB_USER, WEB_PASS)) return;
+    JsonDocument doc;
+    deserializeJson(doc, (const char*)data, len);
+    if(doc["phTarget"].is<float>()) phTarget = doc["phTarget"];
+    if(doc["phHysteresis"].is<float>()) phHysteresis = doc["phHysteresis"];
+    if(doc["tempTarget"].is<float>()) tempTarget = doc["tempTarget"];
+    if(doc["stirrerSpeed"].is<int>()) stirrerSpeed = doc["stirrerSpeed"];
+    if(doc["feedingInterval"].is<long>()) feedingInterval = doc["feedingInterval"];
+    if(doc["kp"].is<float>()) Kp = doc["kp"];
+    if(doc["ki"].is<float>()) Ki = doc["ki"];
+    if(doc["kd"].is<float>()) Kd = doc["kd"];
+    if(doc["mqttBroker"].is<String>()) mqttBroker = doc["mqttBroker"].as<String>();
+    if(doc["mqttEnabled"].is<bool>()) mqttEnabled = doc["mqttEnabled"];
+    if(doc["phOffset"].is<float>()) phOffset = doc["phOffset"];
+    if(doc["phSlope"].is<float>()) phSlope = doc["phSlope"];
+    if(doc["odZero"].is<float>()) odZeroVoltage = doc["odZero"];
     saveSettings();
     request->send(200, "text/plain", "OK");
   });
@@ -230,10 +263,21 @@ void setup() {
 }
 
 void loop() {
-  ArduinoOTA.handle();
-  if (mqttEnabled) {
-    if (!mqttClient.connected()) reconnectMQTT();
-    mqttClient.loop();
+  if (WiFi.status() == WL_CONNECTED) {
+    ArduinoOTA.handle();
+    if (mqttEnabled) {
+      if (!mqttClient.connected()) reconnectMQTT();
+      mqttClient.loop();
+    }
+  } else {
+    // Reconnect logic
+    static unsigned long lastReconnectAttempt = 0;
+    if (millis() - lastReconnectAttempt > 30000) {
+      Serial.println("Attempting to reconnect to WiFi...");
+      WiFi.disconnect();
+      WiFi.begin(WIFI_SSID, WIFI_PASS);
+      lastReconnectAttempt = millis();
+    }
   }
   unsigned long currentMillis = millis();
 
@@ -254,11 +298,12 @@ void loop() {
   }
 
   // Manual touch button logic
-  if (digitalRead(TOUCH_BUTTON_PIN) == HIGH && !nutrientPumpActive) {
-    nutrientPumpActive = true;
-    nutrientPumpStartTime = currentMillis;
-    digitalWrite(PUMP_NUTRIENT_PIN, HIGH);
+  if (digitalRead(TOUCH_BUTTON_PIN) == HIGH && !nutrientPump.active) {
+    startPump(nutrientPump, FEEDING_DURATION_MS);
   }
+
+  // Pump service (Non-blocking)
+  updatePumps();
 
   // Feeding logic (Non-blocking)
   controlFeeding();
@@ -321,9 +366,21 @@ void updateFluo() {
   digitalWrite(FLUO_LED_PIN, LOW);
 }
 
+bool checkI2C(uint8_t address) {
+  Wire.beginTransmission(address);
+  return (Wire.endTransmission() == 0);
+}
+
 void updateSensors() {
   unsigned long currentMillis = millis();
   sensorError = false; // Reset error flag at start of cycle
+
+#if USE_ADS1115
+  if (!checkI2C(0x48)) {
+    Serial.println("ADS1115 I2C disconnect detected!");
+    sensorError = true;
+  }
+#endif
 
 #if USE_TEMP_SENSOR
   // Read Temperature result from previous request
@@ -347,36 +404,40 @@ void updateSensors() {
 #endif
 
 #if USE_ADS1115
-  #if USE_UV_SENSOR
-  // Read UV Intensity (ADS Channel 3)
-  int16_t uvRaw = ads.readADC_SingleEnded(ADS_UV_CH);
-  if (uvRaw != -1) {
+  if (!sensorError) {
+    #if USE_UV_SENSOR
+    // Read UV Intensity (ADS Channel 3)
+    int16_t uvRaw = ads.readADC_SingleEnded(ADS_UV_CH);
     currentUV_V = (float)uvRaw * 0.0001875;
-    if (VERBOSE_ADC) Serial.printf("UV_V: %.4fV\n", currentUV_V);
-  }
-  #endif
+    if (VERBOSE_ADC) Serial.printf("UV_V: %.4fV (%d)\n", currentUV_V, uvRaw);
+    #endif
 
-  #if USE_PRESSURE_SENSOR
-  // Read Pressure (ADS Channel 2)
-  int16_t pressureRaw = ads.readADC_SingleEnded(ADS_PRESSURE_CH);
-  if (pressureRaw != -1) {
+    #if USE_PRESSURE_SENSOR
+    // Read Pressure (ADS Channel 2)
+    int16_t pressureRaw = ads.readADC_SingleEnded(ADS_PRESSURE_CH);
     currentPressure_V = (float)pressureRaw * 0.0001875;
-    if (VERBOSE_ADC) Serial.printf("PRES_V: %.4fV\n", currentPressure_V);
-  }
-  #endif
+    if (VERBOSE_ADC) Serial.printf("PRES_V: %.4fV (%d)\n", currentPressure_V, pressureRaw);
+    #endif
 
-  #if USE_PH_PROBE
-  // Read pH
-  int16_t phRaw = ads.readADC_SingleEnded(ADS_PH_CH);
-  if (phRaw != -1) {
+    #if USE_PH_PROBE
+    // Read pH
+    int16_t phRaw = ads.readADC_SingleEnded(ADS_PH_CH);
     currentPH_V = (float)phRaw * 0.0001875;
-    currentPH = 7.0 + (currentPH_V * phSlope) + phOffset;
+    // Nernstian formula: pH = 7.0 + (V_7.0 - V_measured) / (Slope_V)
+    // We use phSlope as a multiplier for the default slope (e.g., 1.0 = 59.16 mV/pH)
+    // We use phOffset as a shift in pH units.
+    float effectiveSlope_V = (PH_SLOPE_MV / 1000.0) * phSlope;
+    currentPH = 7.0 + (PH_VMID - currentPH_V) / effectiveSlope_V + phOffset;
+
     if (VERBOSE_ADC) Serial.printf("PH_V: %.4fV -> PH: %.2f\n", currentPH_V, currentPH);
+    #endif
+
   } else {
     sensorError = true;
   }
-  #endif
+#endif
 
+#if USE_ADS1115
   #if USE_OD_SENSOR
   // Read OD
   digitalWrite(OD_LIGHT_PIN, HIGH);
@@ -421,8 +482,9 @@ void controlPH() {
   float dt = (currentMillis - lastUpdate) / 1000.0;
 
   if (abs(error) < phHysteresis) {
-    digitalWrite(PUMP_ACID_PIN, LOW);
-    digitalWrite(PUMP_BASE_PIN, LOW);
+    // If not manually active, ensure OFF
+    if (!acidPump.active) digitalWrite(PUMP_ACID_PIN, LOW);
+    if (!basePump.active) digitalWrite(PUMP_BASE_PIN, LOW);
     phIntegral = 0;
     lastPhError = error;
     lastUpdate = currentMillis;
@@ -445,14 +507,18 @@ void controlPH() {
 
     unsigned long pumpDuration = min((unsigned long)pidOutput, 5000UL);
 
-    if (error > 0) {
-      if (cycleTime < pumpDuration) digitalWrite(PUMP_ACID_PIN, HIGH);
-      else digitalWrite(PUMP_ACID_PIN, LOW);
-      digitalWrite(PUMP_BASE_PIN, LOW);
-    } else {
-      if (cycleTime < pumpDuration) digitalWrite(PUMP_BASE_PIN, HIGH);
-      else digitalWrite(PUMP_BASE_PIN, LOW);
-      digitalWrite(PUMP_ACID_PIN, LOW);
+    if (error > 0) { // Need Acid
+      if (!acidPump.active) {
+        if (cycleTime < pumpDuration) digitalWrite(PUMP_ACID_PIN, HIGH);
+        else digitalWrite(PUMP_ACID_PIN, LOW);
+      }
+      if (!basePump.active) digitalWrite(PUMP_BASE_PIN, LOW);
+    } else { // Need Base
+      if (!basePump.active) {
+        if (cycleTime < pumpDuration) digitalWrite(PUMP_BASE_PIN, HIGH);
+        else digitalWrite(PUMP_BASE_PIN, LOW);
+      }
+      if (!acidPump.active) digitalWrite(PUMP_ACID_PIN, LOW);
     }
 
     lastPhError = error;
@@ -463,14 +529,8 @@ void controlPH() {
 void controlFeeding() {
   unsigned long currentMillis = millis();
   if (currentMillis - lastFeedingTime > (unsigned long)feedingInterval) {
-    nutrientPumpActive = true;
-    nutrientPumpStartTime = currentMillis;
-    digitalWrite(PUMP_NUTRIENT_PIN, HIGH);
+    startPump(nutrientPump, FEEDING_DURATION_MS);
     lastFeedingTime = currentMillis;
-  }
-  if (nutrientPumpActive && (currentMillis - nutrientPumpStartTime >= FEEDING_DURATION_MS)) {
-    digitalWrite(PUMP_NUTRIENT_PIN, LOW);
-    nutrientPumpActive = false;
   }
 }
 
@@ -507,6 +567,7 @@ void logData() {
 void setupMQTT() {
   mqttClient.setServer(mqttBroker.c_str(), MQTT_PORT);
   mqttClient.setCallback(mqttCallback);
+  mqttClient.setBufferSize(512);
 }
 
 void reconnectMQTT() {
@@ -520,14 +581,12 @@ void reconnectMQTT() {
 }
 
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
-  StaticJsonDocument<200> doc;
+  JsonDocument doc;
   deserializeJson(doc, payload, length);
-  if (doc.containsKey("command")) {
+  if (doc["command"].is<String>()) {
     String cmd = doc["command"];
     if (cmd == "feed") {
-      nutrientPumpActive = true;
-      nutrientPumpStartTime = millis();
-      digitalWrite(PUMP_NUTRIENT_PIN, HIGH);
+      startPump(nutrientPump, FEEDING_DURATION_MS);
     }
   }
 }
@@ -538,6 +597,10 @@ void emergencyStop() {
   digitalWrite(PUMP_NUTRIENT_PIN, LOW);
   digitalWrite(HEATER_PIN, LOW);
   analogWrite(STIRRER_PIN, 0);
+
+  acidPump.active = false;
+  basePump.active = false;
+  nutrientPump.active = false;
 }
 
 void loadSettings() {
@@ -546,7 +609,7 @@ void loadSettings() {
 
   File file = SPIFFS.open("/settings.json", FILE_READ);
   if(!file) return;
-  StaticJsonDocument<1024> doc;
+  JsonDocument doc;
   deserializeJson(doc, file);
   phTarget = doc["phTarget"] | PH_TARGET;
   mqttBroker = doc["mqttBroker"] | MQTT_BROKER;
@@ -570,7 +633,7 @@ void saveSettings() {
 
   File file = SPIFFS.open("/settings.json", FILE_WRITE);
   if(!file) return;
-  StaticJsonDocument<1024> doc;
+  JsonDocument doc;
   doc["phTarget"] = phTarget;
   doc["mqttBroker"] = mqttBroker;
   doc["mqttEnabled"] = mqttEnabled;
@@ -590,11 +653,12 @@ void saveSettings() {
 
 void setupOTA() {
   ArduinoOTA.setHostname("biofermenter-esp32s3");
+  ArduinoOTA.setPassword(OTA_PASS);
   ArduinoOTA.begin();
 }
 
 String getTelemetryJSON() {
-  StaticJsonDocument<512> doc;
+  JsonDocument doc;
   DateTime now = rtc.now();
   doc["ph"] = currentPH;
   doc["od"] = currentOD;

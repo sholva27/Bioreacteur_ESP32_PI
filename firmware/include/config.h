@@ -25,6 +25,10 @@
 #define ADS_PRESSURE_CH 2
 #define ADS_UV_CH 3
 
+// pH Sensor Midpoint and Slope (Nernstian)
+#define PH_VMID 2.5          // Voltage at pH 7.0
+#define PH_SLOPE_MV 59.16    // mV per pH unit at 25°C
+
 // System Constants
 #define PH_TARGET 7.0
 #define PH_HYSTERESIS 0.1
@@ -32,6 +36,7 @@
 #define STIRRER_SPEED_DEFAULT 128
 #define FEEDING_INTERVAL_MS 3600000 // 1 hour
 #define FEEDING_DURATION_MS 5000     // 5 seconds
+#define PUMP_MAX_MS 10000            // 10 seconds safety cap
 #define OD_CALIBRATION_FACTOR 1.0
 #define SENSOR_READ_INTERVAL_MS 2000
 #define LOG_INTERVAL_MS 60000        // 1 minute
