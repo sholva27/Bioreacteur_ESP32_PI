@@ -24,7 +24,7 @@ const char index_html[] PROGMEM = R"rawliteral(
 </head>
 <body>
   <h1>Probiotic Biofermenter Dashboard</h1>
-  <div id="error-msg" class="status-error" style="display:none;">SENSOR ERROR DETECTED - SYSTEM IN FAILSAFE</div>
+  <div id="error-msg" class="status-error" style="display:none;" role="alert" aria-live="assertive">SENSOR ERROR DETECTED - SYSTEM IN FAILSAFE</div>
 
   <div class="card">
     <h2>pH Level</h2>
@@ -64,8 +64,8 @@ const char index_html[] PROGMEM = R"rawliteral(
 
   <div class="card">
     <h2>Configuration</h2>
-    <label>pH Target:</label> <input type="number" id="target-ph" step="0.1"><br>
-    <label>Temp Target:</label> <input type="number" id="target-temp" step="0.5"><br>
+    <label for="target-ph">pH Target:</label> <input type="number" id="target-ph" step="0.1"><br>
+    <label for="target-temp">Temp Target:</label> <input type="number" id="target-temp" step="0.5"><br>
     <label>Stirrer Speed (0-255):</label> <input type="number" id="stirrer-speed"><br>
     <label>Kp:</label> <input type="number" id="kp"><br>
     <label>Ki:</label> <input type="number" id="ki"><br>
@@ -73,7 +73,7 @@ const char index_html[] PROGMEM = R"rawliteral(
     <hr>
     <label>Enable MQTT:</label> <input type="checkbox" id="mqtt-enabled"><br>
     <label>MQTT Broker:</label> <input type="text" id="mqtt-broker"><br>
-    <button onclick="updateSettings()">Save Settings</button>
+    <button id="save-btn" onclick="updateSettings('save-btn')">Save Settings</button>
     <button class="btn-download" onclick="window.location.href='/download_log'">Download Log</button>
     <button onclick="togglePump('nutrient')">Manual Feed</button>
   </div>
@@ -183,7 +183,10 @@ const char index_html[] PROGMEM = R"rawliteral(
        });
     }
 
-    function updateSettings(extra = {}) {
+    function updateSettings(btnId = null, extra = {}) {
+      if (typeof btnId === 'object' && btnId !== null) { extra = btnId; btnId = null; }
+      const btn = btnId ? document.getElementById(btnId) : null;
+      if (btn) { btn.disabled = true; btn.innerHTML = 'Saving...'; }
       fetch('/settings').then(r => r.json()).then(data => {
         var settings = data;
         settings.mqttEnabled = document.getElementById('mqtt-enabled').checked;
@@ -196,11 +199,9 @@ const char index_html[] PROGMEM = R"rawliteral(
         settings.kd = parseFloat(document.getElementById('kd').value);
 
         Object.assign(settings, extra);
-        fetch('/set', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify(settings)
-        }).then(() => { if (!Object.keys(extra).length) alert("Settings Updated Successfully"); });
+        fetch('/set', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(settings) })
+          .then(() => { if (btn) { btn.innerHTML = 'Saved!'; setTimeout(() => { btn.disabled = false; btn.innerHTML = 'Save Settings'; }, 2000); } })
+          .catch(() => { if (btn) { btn.innerHTML = 'Error'; btn.disabled = false; } });
       });
     }
 
