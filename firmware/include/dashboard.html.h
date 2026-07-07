@@ -73,7 +73,7 @@ const char index_html[] PROGMEM = R"rawliteral(
     <hr>
     <label>Enable MQTT:</label> <input type="checkbox" id="mqtt-enabled"><br>
     <label>MQTT Broker:</label> <input type="text" id="mqtt-broker"><br>
-    <button onclick="updateSettings()">Save Settings</button>
+    <button id="save-btn" aria-label="Save configuration settings" onclick="provideBtnFeedback('save-btn', 'Saving...', 'Saved!', () => updateSettings())">Save Settings</button>
     <button class="btn-download" onclick="window.location.href='/download_log'">Download Log</button>
     <button onclick="togglePump('nutrient')">Manual Feed</button>
   </div>
@@ -103,6 +103,27 @@ const char index_html[] PROGMEM = R"rawliteral(
   </div>
 
   <script>
+    function provideBtnFeedback(btnId, waitMsg, successMsg, actionFn) {
+      const btn = document.getElementById(btnId);
+      const originalText = btn.innerText;
+      btn.innerText = waitMsg;
+      btn.disabled = true;
+
+      return actionFn()
+        .then(() => {
+          btn.innerText = successMsg;
+          setTimeout(() => {
+            btn.innerText = originalText;
+            btn.disabled = false;
+          }, 2000);
+        })
+        .catch(err => {
+          btn.innerText = originalText;
+          btn.disabled = false;
+          console.error(err);
+        });
+    }
+
     var ctx = document.getElementById('bioChart').getContext('2d');
     var chart = new Chart(ctx, {
         type: 'line',
@@ -184,7 +205,7 @@ const char index_html[] PROGMEM = R"rawliteral(
     }
 
     function updateSettings(extra = {}) {
-      fetch('/settings').then(r => r.json()).then(data => {
+      return fetch('/settings').then(r => r.json()).then(data => {
         var settings = data;
         settings.mqttEnabled = document.getElementById('mqtt-enabled').checked;
         settings.mqttBroker = document.getElementById('mqtt-broker').value;
@@ -196,11 +217,11 @@ const char index_html[] PROGMEM = R"rawliteral(
         settings.kd = parseFloat(document.getElementById('kd').value);
 
         Object.assign(settings, extra);
-        fetch('/set', {
+        return fetch('/set', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify(settings)
-        }).then(() => { if (!Object.keys(extra).length) alert("Settings Updated Successfully"); });
+        });
       });
     }
 
